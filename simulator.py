@@ -1,8 +1,9 @@
 import beamformer as bf
 
 def main():
-    # TODO parse input arguments
-    print(bf.test("Hello, world"))
-
+    antenna = bf.define_ULA(2e9, 0.5, 10)
+    parameters = bf.define_parameters(1800, 25)
+    result = bf.beamformer(antenna, parameters)
+    print(result)
 
 main()
