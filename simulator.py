@@ -2,7 +2,7 @@ import beamformer as bf
 
 def main():
     antenna = bf.define_ULA(2e9, 0.5, 10)
-    static_targets = [0.5, 1.2] # in radians
+    static_targets = [1, -1] # in radians
     population_size = 100
     angular_samples = 1500
     intertia_weight = 0.5

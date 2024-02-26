@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 def calculate_array_factor(phases, antenna, parameters):
     array_factor = 20 * np.log10(np.abs(calculate_er(phases, antenna, parameters)))
@@ -25,7 +26,8 @@ def fitness(position, antenna, parameters):
     array_factor = calculate_array_factor(position, antenna, parameters)
     score = 0
     for target in parameters["target_samples"]:
-        score = score + array_factor[target]
+        score += array_factor[target]
+        # score += (array_factor[target-1] + array_factor[target] + array_factor[target+1])/3
     return score
 
 def new_particle(antenna, parameters):
@@ -37,6 +39,18 @@ def new_particle(antenna, parameters):
         "velocity" : np.random.rand(antenna["num_elements"]),
         "score" : score
     }
+
+def display(position, antenna, parameters):
+    array_factor = calculate_array_factor(position, antenna, parameters)
+    plt.clf()
+    plt.plot(parameters["phi"]-np.pi/2, array_factor)
+    for target in parameters["target_samples"]:
+        plt.axvline(2*target/parameters["samples"], color="red")
+    plt.xlim(-np.pi/2, np.pi/2)
+    plt.ylim((-50, 0))
+    plt.xlabel('Beam angle [rad]')
+    plt.ylabel('Power [dB]')
+    plt.pause(0.01)
 
 def define_parameters(pop_size, angular_samples, cognitive_coeff, social_coeff, intertia_weight, max_steps, static_targets):
     phi = np.linspace(0, np.pi, angular_samples)
@@ -78,6 +92,7 @@ def particle_swarm_optimisation(antenna, parameters):
         population, best_known_position, best_score = step_PSO(population, best_known_position, best_score, antenna, parameters)
         step += 1
         print(f"Position: {best_known_position}\n Score: {best_score}")
+        display(best_known_position, antenna, parameters)
     return best_known_position
 
 def step_PSO(population, best_known_position, best_score, antenna, parameters):
@@ -99,5 +114,6 @@ def step_PSO(population, best_known_position, best_score, antenna, parameters):
     return population, best_known_position, best_score
 
 def beamformer(antenna, parameters):
-    result = particle_swarm_optimisation(antenna, parameters)
+    best_found_position = particle_swarm_optimisation(antenna, parameters)
+    display(best_found_position, antenna, parameters)
     return result
