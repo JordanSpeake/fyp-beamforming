@@ -1,18 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def calculate_array_factor(phases, antenna, parameters):
-    array_factor = 20 * np.log10(np.abs(calculate_er(phases, antenna, parameters)))
-    return array_factor
+def calculate_array_factor(position, antenna, parameters):
+    phases, weights = np.split(position, 2)
+    array_factor = 20 * np.log10(np.abs(calculate_er(phases, weights, antenna, parameters)))
+    return array_factor - np.max(array_factor)
 
-def calculate_er(phases, antenna, parameters):
+def calculate_er(phases, weights, antenna, parameters):
     # TODO - hot code
     e_r = np.zeros(parameters["samples"], dtype=np.csingle)
     phi = parameters["phi"]
     for i in range(parameters["samples"]):
         angle = phi[i]
         theta = antenna["wavenumber"] * np.cos(angle) * antenna["positions"] + phases
-        e_t = np.sum(antenna["weights"] * np.exp(1j * theta))
+        e_t = np.sum(weights * np.exp(1j * theta))
         e_r[i] = e_t/antenna["num_elements"]
     return e_r
 
@@ -31,12 +32,14 @@ def fitness(position, antenna, parameters):
     return score
 
 def new_particle(antenna, parameters):
-    position = np.random.rand(antenna["num_elements"]) *2*np.pi
+    phases = np.random.rand(antenna["num_elements"]) *2*np.pi
+    weights = np.random.rand(antenna["num_elements"])
+    position = np.concatenate((phases, weights))
     score = fitness(position, antenna, parameters)
     return {
         "best_position" : position,
         "position" : position,
-        "velocity" : np.random.rand(antenna["num_elements"]),
+        "velocity" : np.random.rand(2*antenna["num_elements"]),
         "score" : score
     }
 
@@ -89,12 +92,11 @@ def define_ULA(frequency, spacing_coeff, num_elements):
         "frequency" : frequency,
         "wavelength" : wavelength,
         "wavenumber" : 2*np.pi / wavelength,
-        "weights" : np.ones(num_elements)
     }
 
 def particle_swarm_optimisation(antenna, parameters, logging):
     population = new_population(antenna, parameters)
-    best_known_position = np.random.rand(antenna["num_elements"]) *2*np.pi
+    best_known_position = np.random.rand(2*antenna["num_elements"]) *2*np.pi
     best_score = -1000
     step = 0
     while step <= parameters["max_steps"]:
@@ -108,8 +110,8 @@ def particle_swarm_optimisation(antenna, parameters, logging):
 def step_PSO(population, best_known_position, best_score, antenna, parameters):
     for particle in population:
         a = parameters["intertia_weight"]*particle["velocity"]
-        b = parameters["cognitive_coeff"]*np.random.rand(antenna["num_elements"])*(np.subtract(particle["best_position"], particle["position"]))
-        c = parameters["social_coeff"]*np.random.rand(antenna["num_elements"])*(np.subtract(best_known_position, particle["position"]))
+        b = parameters["cognitive_coeff"]*np.random.rand(2*antenna["num_elements"])*(np.subtract(particle["best_position"], particle["position"]))
+        c = parameters["social_coeff"]*np.random.rand(2*antenna["num_elements"])*(np.subtract(best_known_position, particle["position"]))
         particle["velocity"] = a + b + c # TODO refactor readability
         particle["position"] = np.add(particle["position"], particle["velocity"])
         score = fitness(particle["position"], antenna, parameters)
