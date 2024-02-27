@@ -100,10 +100,10 @@ def display(position, antenna, parameters, persist=False):
 
 
 
-def clip_position(particle_position):
-    """Clip phase position to [0, 2pi] and weights to [0, 1]"""
+def wrap_position(particle_position):
+    """Wrap phase position to [0, 2pi] and weights to [0, 1]"""
     phases, weights = np.split(particle_position, 2)
-    return np.concatenate((np.clip(phases, 0, 2 * np.pi), np.clip(weights, 0, 1)))
+    return np.concatenate((np.mod(phases, 2 * np.pi), np.clip(weights, 0, 1)))
 
 
 def clip_velocity(particle_velocity, parameters):
@@ -130,7 +130,7 @@ def update_particle(particle, best_known_position, antenna, parameters):
     particle["velocity"] = clip_velocity(
         inertial_component + cognitive_component + social_component, parameters
     )
-    particle["position"] = clip_position(
+    particle["position"] = wrap_position(
         np.add(particle["position"], particle["velocity"])
     )
     return particle

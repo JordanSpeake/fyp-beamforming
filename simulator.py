@@ -10,7 +10,7 @@ def main():
         angular_samples=360 * 4,
         cognitive_coeff=0.35,
         social_coeff=0.35,
-        intertia_weight=0.8,
+        intertia_weight=0.4,
         max_steps=50,
         static_targets=np.linspace(-np.pi / 2 + 0.5, np.pi / 2 - 0.5, 0),
         beamwidth=0.02,
