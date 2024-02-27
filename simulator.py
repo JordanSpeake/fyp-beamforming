@@ -1,16 +1,22 @@
 import beamformer as bf
+import numpy as np
+
 
 def main():
-    antenna = bf.define_ULA(2e9, 0.5, 15)
-    static_targets = [1, -1] # in radians
-    population_size = 100
-    angular_samples = 1000
-    intertia_weight = 0.9
-    cognitive_coeff = 0.5
-    social_coeff = 0.5
-    max_steps = 50
-    parameters = bf.define_parameters(population_size, angular_samples, cognitive_coeff, social_coeff, intertia_weight, max_steps, static_targets)
-    logging = bf.define_logging(show_plots=True, plots_persist=True)
+    antenna = bf.define_ULA(2e9, 0.5, 20)
+    parameters = bf.define_parameters(
+        population_size=200,
+        angular_samples=360 * 4,
+        cognitive_coeff=0.35,
+        social_coeff=0.35,
+        intertia_weight=0.8,
+        max_steps=50,
+        static_targets=np.linspace(-np.pi / 2 + 0.5, np.pi / 2 - 0.5, 0),
+        beamwidth=0.02,
+        sidelobe_suppression=50,
+    )
+    logging = bf.define_logging(show_plots=True, plots_persist=True, verbose=True)
     result = bf.beamformer(antenna, parameters, logging)
+
 
 main()

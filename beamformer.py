@@ -1,21 +1,26 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import find_peaks
+
 
 def calculate_array_factor(position, antenna, parameters):
-    phases, weights = np.split(position, 2)
-    array_factor = 20 * np.log10(np.abs(calculate_er(phases, weights, antenna, parameters)))
+    array_factor = 20 * np.log10(np.abs(calculate_er(position, antenna, parameters)))
     return array_factor - np.max(array_factor)
 
-def calculate_er(phases, weights, antenna, parameters):
+
+def calculate_er(position, antenna, parameters):
     # TODO - hot code
     e_r = np.zeros(parameters["samples"], dtype=np.csingle)
-    phi = parameters["phi"]
+    # offset because of calculation funnybusiness... should refactor function
+    phi = parameters["phi"] + np.pi / 2
+    phases, weights = np.split(position, 2)
     for i in range(parameters["samples"]):
         angle = phi[i]
         theta = antenna["wavenumber"] * np.cos(angle) * antenna["positions"] + phases
         e_t = np.sum(weights * np.exp(1j * theta))
-        e_r[i] = e_t/antenna["num_elements"]
+        e_r[i] = e_t / antenna["num_elements"]
     return e_r
+
 
 def new_population(antenna, parameters):
     population = []
@@ -23,109 +28,182 @@ def new_population(antenna, parameters):
         population.append(new_particle(antenna, parameters))
     return population
 
+
+def calculate_sidelobe_level(array_factor, targets):
+    # TODO make this more accurate, average will do for now
+    peaks, properties = find_peaks(array_factor, height=-50, distance=5)
+    heights = np.sort(properties["peak_heights"])
+    sidelobe_level = np.average(heights)
+    return sidelobe_level, peaks, properties
+
+
 def fitness(position, antenna, parameters):
+
     array_factor = calculate_array_factor(position, antenna, parameters)
+    beamwidth = parameters["beamwidth_samples"]
     score = 0
     for target in parameters["targets"]:
-        score = score + array_factor[target]
-        # score += (array_factor[target-1] + array_factor[target] + array_factor[target+1])/3
+        beam_range = np.arange(target - beamwidth, target + beamwidth)
+        score += np.sum(array_factor[beam_range]) * 2
+        array_factor = np.delete(array_factor, beam_range)
+    sidelobe_level, _, _ = calculate_sidelobe_level(array_factor, parameters["targets"])
+    sidelobe_penalty = np.exp(
+        -parameters["sidelobe_suppression"] / (sidelobe_level - 0.01)
+    )
+    score -= sidelobe_penalty
     return score
 
+
 def new_particle(antenna, parameters):
-    phases = np.random.rand(antenna["num_elements"]) *2*np.pi
+    phases = np.random.rand(antenna["num_elements"]) * 2 * np.pi
     weights = np.random.rand(antenna["num_elements"])
     position = np.concatenate((phases, weights))
     score = fitness(position, antenna, parameters)
     return {
-        "best_position" : position,
-        "position" : position,
-        "velocity" : np.random.rand(2*antenna["num_elements"]),
-        "score" : score
+        "best_position": position,
+        "position": position,
+        "velocity": np.random.rand(2 * antenna["num_elements"]),
+        "score": score,
     }
+
 
 def display(position, antenna, parameters, persist=False):
     array_factor = calculate_array_factor(position, antenna, parameters)
     plt.clf()
-    plt.plot(parameters["phi"]-np.pi/2, array_factor)
-    targets_markers = 2*np.pi * parameters["targets"] / parameters["samples"]
+    plt.plot(parameters["phi"], array_factor)
+
+    targets_markers = (
+        2 * np.pi * parameters["targets"] / parameters["samples"]
+    ) - np.pi
     for target in targets_markers:
-        plt.axvline(target, color="red")
-    plt.xlim(-np.pi/2, np.pi/2)
+        plt.axvspan(
+            target - parameters["beamwidth"],
+            target + parameters["beamwidth"],
+            color="green",
+            alpha=0.5,
+        )
+
+    sidelobe_level, peaks, _ = calculate_sidelobe_level(
+        array_factor, parameters["targets"]
+    )
+    peak_angles = (2 * np.pi * peaks / parameters["samples"]) - np.pi
+    plt.plot(peak_angles, array_factor[peaks], "X", color="orange")
+
+    print(f"sidelobe: {sidelobe_level}")
+    plt.axhline(sidelobe_level, color="orange", alpha=0.5)
+    plt.xlim(-np.pi / 2, np.pi / 2)
     plt.ylim((-50, 0))
-    plt.xlabel('Beam angle [rad]')
-    plt.ylabel('Power [dB]')
+    plt.xlabel("Beam angle [rad]")
+    plt.ylabel("Power [dB]")
     if persist:
         plt.show()
     else:
         plt.pause(0.05)
 
-def define_parameters(pop_size, angular_samples, cognitive_coeff, social_coeff, intertia_weight, max_steps, static_targets):
-    phi = np.linspace(0, np.pi, angular_samples)
-    targets = np.asarray(static_targets) * angular_samples / (2*np.pi)
+
+def define_parameters(
+    population_size,
+    angular_samples,
+    cognitive_coeff,
+    social_coeff,
+    intertia_weight,
+    max_steps,
+    static_targets,
+    beamwidth,
+    sidelobe_suppression,
+):
+    phi = np.linspace(-np.pi, np.pi, angular_samples)
+    targets = ((np.asarray(static_targets) / (2 * np.pi)) + 0.5) * angular_samples - 1
     targets = targets.astype(int)
+    beamwidth_in_samples = np.asarray(beamwidth * angular_samples / 2 * np.pi)
+    beamwidth_in_samples = beamwidth_in_samples.astype(int)
     return {
-        "population_size" : pop_size,
-        "samples" : angular_samples,
-        "phi" : phi,
-        "cognitive_coeff" : cognitive_coeff,
-        "social_coeff" : social_coeff,
-        "intertia_weight" : intertia_weight,
-        "max_steps" : max_steps,
-        "targets" : targets,
+        "population_size": population_size,
+        "samples": angular_samples,
+        "phi": phi,
+        "cognitive_coeff": cognitive_coeff,
+        "social_coeff": social_coeff,
+        "intertia_weight": intertia_weight,
+        "max_steps": max_steps,
+        "targets": targets,
+        "beamwidth": beamwidth,
+        "beamwidth_samples": beamwidth_in_samples,
+        "sidelobe_suppression": sidelobe_suppression,
     }
 
-def define_logging(show_plots, plots_persist):
+
+def define_logging(show_plots, plots_persist, verbose):
     return {
-        "show_plots" : show_plots,
-        "plots_persist" : plots_persist,
+        "show_plots": show_plots,
+        "plots_persist": plots_persist,
+        "verbose": verbose,
     }
+
 
 def define_ULA(frequency, spacing_coeff, num_elements):
-    wavelength = 3e9/frequency
+    wavelength = 3e9 / frequency
     spacing = wavelength * spacing_coeff
-    N = (num_elements - 1)/2
-    positions = np.linspace(spacing*-N, spacing*N, num_elements)
+    N = (num_elements - 1) / 2
+    positions = np.linspace(spacing * -N, spacing * N, num_elements)
     return {
-        "num_elements" : num_elements,
-        "spacing" : spacing,
-        "positions" : positions,
-        "frequency" : frequency,
-        "wavelength" : wavelength,
-        "wavenumber" : 2*np.pi / wavelength,
+        "num_elements": num_elements,
+        "spacing": spacing,
+        "positions": positions,
+        "frequency": frequency,
+        "wavelength": wavelength,
+        "wavenumber": 2 * np.pi / wavelength,
     }
+
 
 def particle_swarm_optimisation(antenna, parameters, logging):
     population = new_population(antenna, parameters)
-    best_known_position = np.random.rand(2*antenna["num_elements"]) *2*np.pi
-    best_score = -1000
-    step = 0
-    while step <= parameters["max_steps"]:
-        print(f"Step: {step}")
-        population, best_known_position, best_score = step_PSO(population, best_known_position, best_score, antenna, parameters)
+    best_known_position = np.random.rand(2 * antenna["num_elements"]) * 2 * np.pi
+    best_score = fitness(best_known_position, antenna, parameters)
+    for step in range(0, parameters["max_steps"]):
+        population, best_known_position, best_score = step_PSO(
+            population, best_known_position, best_score, antenna, parameters
+        )
         step += 1
-        print(f"Position: {best_known_position}\n Score: {best_score}")
-        if logging["show_plots"]: display(best_known_position, antenna, parameters)
+        if logging["verbose"]:
+            print(f"Step: {step}")
+            print(f"Position: {best_known_position}\n Score: {best_score}")
+        if logging["show_plots"]:
+            display(best_known_position, antenna, parameters)
     return best_known_position
+
+
+def update_particle(particle, best_known_position, antenna, parameters):
+    inertial_component = parameters["intertia_weight"] * particle["velocity"]
+    cognitive_component = (
+        parameters["cognitive_coeff"]
+        * np.random.rand(2 * antenna["num_elements"])
+        * (np.subtract(particle["best_position"], particle["position"]))
+    )
+    social_component = (
+        parameters["social_coeff"]
+        * np.random.rand(2 * antenna["num_elements"])
+        * (np.subtract(best_known_position, particle["position"]))
+    )
+    particle["velocity"] = inertial_component + cognitive_component + social_component
+    particle["position"] = np.add(particle["position"], particle["velocity"])
+    return particle
+
 
 def step_PSO(population, best_known_position, best_score, antenna, parameters):
     for particle in population:
-        a = parameters["intertia_weight"]*particle["velocity"]
-        b = parameters["cognitive_coeff"]*np.random.rand(2*antenna["num_elements"])*(np.subtract(particle["best_position"], particle["position"]))
-        c = parameters["social_coeff"]*np.random.rand(2*antenna["num_elements"])*(np.subtract(best_known_position, particle["position"]))
-        particle["velocity"] = a + b + c # TODO refactor readability
-        particle["position"] = np.add(particle["position"], particle["velocity"])
+        particle = update_particle(particle, best_known_position, antenna, parameters)
         score = fitness(particle["position"], antenna, parameters)
         if score > best_score:
             best_known_position = particle["position"]
             best_score = score
-            particle["best_position"] = particle["position"]
-            particle["score"] = score
-        elif score > particle["score"]:
+        if score > particle["score"]:
             particle["best_position"] = particle["position"]
             particle["score"] = score
     return population, best_known_position, best_score
 
+
 def beamformer(antenna, parameters, logging):
     result = particle_swarm_optimisation(antenna, parameters, logging)
-    if logging["show_plots"] and logging["plots_persist"]: display(result, antenna, parameters, persist=True)
+    if logging["show_plots"] and logging["plots_persist"]:
+        display(result, antenna, parameters, persist=True)
     return result
