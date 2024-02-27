@@ -38,7 +38,6 @@ def calculate_sidelobe_level(array_factor, targets):
 
 
 def fitness(position, antenna, parameters):
-
     array_factor = calculate_array_factor(position, antenna, parameters)
     beamwidth = parameters["beamwidth_samples"]
     score = 0
@@ -111,6 +110,7 @@ def define_parameters(
     static_targets,
     beamwidth,
     sidelobe_suppression,
+    max_particle_velocity,
 ):
     phi = np.linspace(-np.pi, np.pi, angular_samples)
     targets = ((np.asarray(static_targets) / (2 * np.pi)) + 0.5) * angular_samples - 1
@@ -129,6 +129,7 @@ def define_parameters(
         "beamwidth": beamwidth,
         "beamwidth_samples": beamwidth_in_samples,
         "sidelobe_suppression": sidelobe_suppression,
+        "max_particle_velocity": max_particle_velocity,
     }
 
 
@@ -155,6 +156,55 @@ def define_ULA(frequency, spacing_coeff, num_elements):
     }
 
 
+def clip_position(particle_position):
+    """Clip phase position to [0, 2pi] and weights to [0, 1]"""
+    phases, weights = np.split(particle_position, 2)
+    return np.concatenate((np.clip(phases, 0, 2 * np.pi), np.clip(weights, 0, 1)))
+
+
+def clip_velocity(particle_velocity, parameters):
+    """Clip velocity to +/- parameters["max_particle_velocity"]"""
+    return np.clip(
+        particle_velocity,
+        -parameters["max_particle_velocity"],
+        parameters["max_particle_velocity"],
+    )
+
+
+def update_particle(particle, best_known_position, antenna, parameters):
+    inertial_component = parameters["intertia_weight"] * particle["velocity"]
+    cognitive_component = (
+        parameters["cognitive_coeff"]
+        * np.random.rand(2 * antenna["num_elements"])
+        * (np.subtract(particle["best_position"], particle["position"]))
+    )
+    social_component = (
+        parameters["social_coeff"]
+        * np.random.rand(2 * antenna["num_elements"])
+        * (np.subtract(best_known_position, particle["position"]))
+    )
+    particle["velocity"] = clip_velocity(
+        inertial_component + cognitive_component + social_component, parameters
+    )
+    particle["position"] = clip_position(
+        np.add(particle["position"], particle["velocity"])
+    )
+    return particle
+
+
+def step_PSO(population, best_known_position, best_score, antenna, parameters):
+    for particle in population:
+        particle = update_particle(particle, best_known_position, antenna, parameters)
+        score = fitness(particle["position"], antenna, parameters)
+        if score > best_score:
+            best_known_position = particle["position"]
+            best_score = score
+        if score > particle["score"]:
+            particle["best_position"] = particle["position"]
+            particle["score"] = score
+    return population, best_known_position, best_score
+
+
 def particle_swarm_optimisation(antenna, parameters, logging):
     population = new_population(antenna, parameters)
     best_known_position = np.random.rand(2 * antenna["num_elements"]) * 2 * np.pi
@@ -170,36 +220,6 @@ def particle_swarm_optimisation(antenna, parameters, logging):
         if logging["show_plots"]:
             display(best_known_position, antenna, parameters)
     return best_known_position
-
-
-def update_particle(particle, best_known_position, antenna, parameters):
-    inertial_component = parameters["intertia_weight"] * particle["velocity"]
-    cognitive_component = (
-        parameters["cognitive_coeff"]
-        * np.random.rand(2 * antenna["num_elements"])
-        * (np.subtract(particle["best_position"], particle["position"]))
-    )
-    social_component = (
-        parameters["social_coeff"]
-        * np.random.rand(2 * antenna["num_elements"])
-        * (np.subtract(best_known_position, particle["position"]))
-    )
-    particle["velocity"] = inertial_component + cognitive_component + social_component
-    particle["position"] = np.add(particle["position"], particle["velocity"])
-    return particle
-
-
-def step_PSO(population, best_known_position, best_score, antenna, parameters):
-    for particle in population:
-        particle = update_particle(particle, best_known_position, antenna, parameters)
-        score = fitness(particle["position"], antenna, parameters)
-        if score > best_score:
-            best_known_position = particle["position"]
-            best_score = score
-        if score > particle["score"]:
-            particle["best_position"] = particle["position"]
-            particle["score"] = score
-    return population, best_known_position, best_score
 
 
 def beamformer(antenna, parameters, logging):
