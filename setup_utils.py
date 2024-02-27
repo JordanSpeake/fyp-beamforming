@@ -13,6 +13,7 @@ def define_parameters(
     beamwidth,
     sidelobe_suppression,
     max_particle_velocity,
+    neighbourhood_size,
 ):
     phi = np.linspace(-np.pi, np.pi, angular_samples)
     targets = ((np.asarray(static_targets) / (2 * np.pi)) + 0.5) * angular_samples - 1
@@ -32,6 +33,7 @@ def define_parameters(
         "beamwidth_samples": beamwidth_in_samples,
         "sidelobe_suppression": sidelobe_suppression,
         "max_particle_velocity": max_particle_velocity,
+        "neighbourhood_size": neighbourhood_size,
     }
 
 

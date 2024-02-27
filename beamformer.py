@@ -44,11 +44,11 @@ def fitness(position, antenna, parameters):
         beam_range = np.arange(target - beamwidth, target + beamwidth)
         score += np.sum(array_factor[beam_range]) * 2
         array_factor = np.delete(array_factor, beam_range)
-    sidelobe_level, _, _ = calculate_sidelobe_level(array_factor, parameters["targets"])
-    sidelobe_penalty = np.exp(
-        -parameters["sidelobe_suppression"] / (sidelobe_level - 0.01)
+    # sidelobe_level, _, _ = calculate_sidelobe_level(array_factor, parameters["targets"])
+    sidelobe_score = np.exp(
+        parameters["sidelobe_suppression"] / (0.01-np.average(array_factor))
     )
-    score -= sidelobe_penalty
+    score -= sidelobe_score
     return score
 
 
@@ -59,6 +59,7 @@ def new_particle(antenna, parameters):
     score = fitness(position, antenna, parameters)
     return {
         "best_position": position,
+        "best_score": score,
         "position": position,
         "velocity": np.random.rand(2 * antenna["num_elements"]),
         "score": score,
@@ -99,7 +100,6 @@ def display(position, antenna, parameters, persist=False):
         plt.pause(0.05)
 
 
-
 def wrap_position(particle_position):
     """Wrap phase position to [0, 2pi] and weights to [0, 1]"""
     phases, weights = np.split(particle_position, 2)
@@ -115,7 +115,7 @@ def clip_velocity(particle_velocity, parameters):
     )
 
 
-def update_particle(particle, best_known_position, antenna, parameters):
+def move_particle(particle, best_known_position, antenna, parameters):
     inertial_component = parameters["intertia_weight"] * particle["velocity"]
     cognitive_component = (
         parameters["cognitive_coeff"]
@@ -135,35 +135,44 @@ def update_particle(particle, best_known_position, antenna, parameters):
     )
     return particle
 
+def get_best_position_in_range(population, index, neighbourhood_size):
+    best_score = float('-inf')
+    best_position = population[index]["best_position"]
+    neighbourhood = np.mod(np.arange(index-neighbourhood_size, index+neighbourhood_size+1), len(population))
+    for i in neighbourhood:
+        if population[i]["best_score"] > best_score:
+            best_score = population[i]["best_score"]
+            best_position = population[i]["best_position"]
+    return best_position
 
-def step_PSO(population, best_known_position, best_score, antenna, parameters):
-    for particle in population:
-        particle = update_particle(particle, best_known_position, antenna, parameters)
-        score = fitness(particle["position"], antenna, parameters)
-        if score > best_score:
-            best_known_position = particle["position"]
-            best_score = score
-        if score > particle["score"]:
+def step_PSO(population, global_best_position, global_best_score, antenna, parameters):
+    for i, particle in enumerate(population):
+        best_known_position = get_best_position_in_range(population, i, parameters["neighbourhood_size"])
+        particle = move_particle(particle, best_known_position, antenna, parameters)
+        particle["score"] = fitness(particle["position"], antenna, parameters)
+        if particle["score"] > global_best_score:
+            global_best_position = particle["position"]
+            global_best_score = particle["score"]
+        if particle["score"] > particle["best_score"]:
             particle["best_position"] = particle["position"]
-            particle["score"] = score
-    return population, best_known_position, best_score
+            particle["best_score"] = particle["score"]
+    return population, global_best_position, global_best_score
 
 
 def particle_swarm_optimisation(antenna, parameters, logging):
     population = new_population(antenna, parameters)
-    best_known_position = np.random.rand(2 * antenna["num_elements"]) * 2 * np.pi
-    best_score = fitness(best_known_position, antenna, parameters)
+    global_best_position = np.random.rand(2 * antenna["num_elements"]) * 2 * np.pi
+    global_best_score = fitness(global_best_position, antenna, parameters)
     for step in range(0, parameters["max_steps"]):
-        population, best_known_position, best_score = step_PSO(
-            population, best_known_position, best_score, antenna, parameters
+        population, global_best_position, global_best_score = step_PSO(
+            population, global_best_position, global_best_score, antenna, parameters
         )
-        step += 1
         if logging["verbose"]:
             print(f"Step: {step}")
-            print(f"Position: {best_known_position}\n Score: {best_score}")
+            print(f"Position: {global_best_position}\n Score: {global_best_score}")
         if logging["show_plots"]:
-            display(best_known_position, antenna, parameters)
-    return best_known_position
+            display(global_best_position, antenna, parameters)
+    return global_best_position
 
 
 def beamformer(antenna, parameters, logging):
