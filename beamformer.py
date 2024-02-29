@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.signal import find_peaks
+from scipy.signal import find_peaks, peak_prominences
 
 def calculate_array_factor(position, antenna, parameters):
     array_factor = 20 * np.log10(np.abs(calculate_er(position, antenna, parameters)))
@@ -29,28 +29,20 @@ def new_population(antenna, parameters):
     return population
 
 
-def calculate_sidelobe_level(array_factor, targets):
-    # TODO make this more accurate, average will do for now
-    peaks, properties = find_peaks(array_factor, height=-50, distance=5)
-    heights = np.sort(properties["peak_heights"])
-    sidelobe_level = np.average(heights)
-    return sidelobe_level, peaks, properties
-
-
 def fitness(position, antenna, parameters):
+    # array_factor = calculate_array_factor(position, antenna, parameters)
+    # beamwidth = parameters["beamwidth_samples"]
+    # peaks, properties = find_peaks(array_factor, height=-50, distance=5)
+    # score = 0
+    # for target in parameters["targets"]:
+    #     beam_range = np.arange(target - beamwidth, target + beamwidth)
+    #     peaks_in_beam = np.nonzero(np.isin(beam_range, peaks))[0]
+    #     prominences = peak_prominences(array_factor, peaks_in_beam)
+    #     score += np.average(prominences)
+    # return score
     array_factor = calculate_array_factor(position, antenna, parameters)
-    beamwidth = parameters["beamwidth_samples"]
-    score = 0
-    for target in parameters["targets"]:
-        beam_range = np.arange(target - beamwidth, target + beamwidth)
-        score += np.average(array_factor[beam_range])
-    sidelobe_level, _, _ = calculate_sidelobe_level(array_factor, parameters["targets"])
-    sidelobe_score = np.exp(
-        parameters["sidelobe_suppression"] / (0.01-sidelobe_level)
-    )
-    score -= sidelobe_score
-    return score
-
+    soi_score = np.sum(array_factor[parameters["targets"]])
+    return soi_score - np.average(array_factor)
 
 def display(position, antenna, parameters, persist=False):
     array_factor = calculate_array_factor(position, antenna, parameters)
@@ -68,14 +60,12 @@ def display(position, antenna, parameters, persist=False):
             alpha=0.5,
         )
 
-    sidelobe_level, peaks, _ = calculate_sidelobe_level(
-        array_factor, parameters["targets"]
-    )
+    peaks, _ = find_peaks(array_factor, height=-50, distance=5)
     peak_angles = (2 * np.pi * peaks / parameters["samples"]) - np.pi
     plt.plot(peak_angles, array_factor[peaks], "X", color="orange")
 
-    print(f"sidelobe: {sidelobe_level}")
-    plt.axhline(sidelobe_level, color="orange", alpha=0.5)
+    # print(f"sidelobe: {sidelobe_level}")
+    # plt.axhline(sidelobe_level, color="orange", alpha=0.5)
     plt.xlim(-np.pi / 2, np.pi / 2)
     plt.ylim((-40, 0))
     plt.xlabel("Beam angle [rad]")
