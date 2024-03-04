@@ -18,7 +18,7 @@ def main():
         max_particle_velocity=1,  # Per dimension
         neighbourhood_size=10, # for local PSO topology, how many neighbours in each direction a particle knows about
     )
-    logging = setup_utils.define_logging(show_plots=True, plots_persist=True, verbose=True)
+    logging = setup_utils.Logging(show_plots=True, plots_persist=True, verbose=True)
     result = bf.beamformer(antenna, parameters, logging)
 
 

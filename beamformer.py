@@ -30,19 +30,16 @@ def new_population(antenna, parameters):
 
 
 def fitness(position, antenna, parameters):
-    # array_factor = calculate_array_factor(position, antenna, parameters)
-    # beamwidth = parameters["beamwidth_samples"]
-    # peaks, properties = find_peaks(array_factor, height=-50, distance=5)
-    # score = 0
-    # for target in parameters["targets"]:
-    #     beam_range = np.arange(target - beamwidth, target + beamwidth)
-    #     peaks_in_beam = np.nonzero(np.isin(beam_range, peaks))[0]
-    #     prominences = peak_prominences(array_factor, peaks_in_beam)
-    #     score += np.average(prominences)
-    # return score
     array_factor = calculate_array_factor(position, antenna, parameters)
-    soi_score = np.sum(array_factor[parameters["targets"]])
-    return soi_score - np.average(array_factor)
+    beamwidth = parameters["beamwidth_samples"]
+    peaks, properties = find_peaks(array_factor, height=-50, distance=5)
+    score = 0
+    for target in parameters["targets"]:
+        beam_range = np.arange(target - beamwidth, target + beamwidth)
+        peaks_in_beam = np.nonzero(np.isin(beam_range, peaks))[0]
+        prominences = peak_prominences(array_factor, peaks_in_beam)
+        score += np.average(prominences)
+    return score
 
 def display(position, antenna, parameters, persist=False):
     array_factor = calculate_array_factor(position, antenna, parameters)
@@ -150,23 +147,23 @@ def step_PSO(population, global_best_position, global_best_score, antenna, param
 
 def particle_swarm_optimisation(antenna, parameters, logging):
     population = new_population(antenna, parameters)
-    #setting these as an arbitrary member of the initialized population
+    # setting these as an arbitrary member of the initialized population
     global_best_position = population[0]["best_position"]
     global_best_score = population[0]["best_score"]
     for step in range(0, parameters["max_steps"]):
         population, global_best_position, global_best_score = step_PSO(
             population, global_best_position, global_best_score, antenna, parameters
         )
-        if logging["verbose"]:
+        if logging.verbose:
             print(f"Step: {step}")
             print(f"Position: {global_best_position}\n Score: {global_best_score}")
-        if logging["show_plots"]:
+        if logging.show_plots:
             display(global_best_position, antenna, parameters)
     return global_best_position
 
 
 def beamformer(antenna, parameters, logging):
     result = particle_swarm_optimisation(antenna, parameters, logging)
-    if logging["show_plots"] and logging["plots_persist"]:
+    if logging.show_plots and logging.plots_persist:
         display(result, antenna, parameters, persist=True)
     return result

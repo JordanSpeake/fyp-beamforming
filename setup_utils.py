@@ -1,6 +1,7 @@
-"""Dictionary generating functions for setting up a simulation"""
+"""Dataclasses for setting up simulation"""
 
 import numpy as np
+from dataclasses import dataclass
 
 def define_parameters(
     population_size,
@@ -36,14 +37,11 @@ def define_parameters(
         "neighbourhood_size": neighbourhood_size,
     }
 
-
-def define_logging(show_plots, plots_persist, verbose):
-    return {
-        "show_plots": show_plots,
-        "plots_persist": plots_persist,
-        "verbose": verbose,
-    }
-
+@dataclass
+class Logging:
+    show_plots: bool = False
+    plots_persist: bool = False
+    verbose: bool = False
 
 def define_ULA(frequency, spacing_coeff, num_elements):
     wavelength = 3e9 / frequency
