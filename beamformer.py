@@ -12,8 +12,55 @@ class Particle:
             1j * np.random.uniform(antenna.num_elements) * 2 * np.pi
         )
         self.best_position = self.position
+        self.best_known_position = self.position
         self.score = fitness(self.position, antenna, parameters)
         self.best_score = self.score
+        self.best_known_score = self.score
+        self.dimensions = antenna.num_elements
+        self.max_velocity = parameters.max_particle_velocity
+        self.inertia_weight = parameters.intertia_weight
+        self.cognitive_coeff = parameters.cognitive_coeff
+        self.social_coeff = parameters.social_coeff
+
+    def step(self, antenna, parameters):
+    # TODO should the random numbers here be complex as well? or just reals?
+        inertial_component = self.inertia_weight * self.velocity
+        cognitive_component = (
+            self.cognitive_coeff
+            * np.random.rand(self.dimensions)
+            * (np.subtract(self.best_position, self.position))
+        )
+        social_component = (
+            self.social_coeff
+            * np.random.rand(self.dimensions)
+            * (np.subtract(self.best_known_position, self.position))
+        )
+        self.set_velocity(inertial_component + cognitive_component + social_component)
+        self.set_position(np.add(self.position, self.velocity))
+        self.update_score(antenna, parameters)
+
+    def update_score(self, antenna, parameters):
+        self.score = fitness(self.position, antenna, parameters)
+        if self.score > self.best_score:
+            self.best_position = self.position
+            self.best_score = self.score
+        if self.score > self.best_known_score:
+            self.best_known_position = self.position
+            self.best_known_score = self.score
+
+
+    def set_position(self, position):
+        """Set and limit magnitude (weights) of particle to 1 and wrap its angle (phase) [0, 2pi]"""
+        weights = np.clip(np.abs(position), 0, 1)
+        phases = np.mod(np.angle(position), 2 * np.pi)
+        self.position = weights * np.exp(1j * phases)
+
+    def set_velocity(self, velocity):
+        """Set and limit velocity of particle to max_particle_velocity and wrap direction [0, 2pi]"""
+        speed = np.clip(np.abs(velocity), 0, self.max_velocity)
+        direction = np.mod(np.angle(velocity), 2 * np.pi)
+        self.velocity =  speed * np.exp(1j * direction)
+
 
 
 def new_population(antenna, parameters):
@@ -22,11 +69,9 @@ def new_population(antenna, parameters):
         population.append(Particle(antenna, parameters))
     return population
 
-
 def calculate_array_factor(position, antenna, parameters):
     array_factor = 20 * np.log10(np.abs(calculate_er(position, antenna, parameters)))
     return array_factor - np.max(array_factor)
-
 
 def calculate_er(position, antenna, parameters):
     # TODO - hot code
@@ -50,9 +95,7 @@ def fitness(position, antenna, parameters):
     score = 0
     for target in parameters.targets:
         beam_range = np.arange(target - beamwidth, target + beamwidth)
-        peaks_in_beam = np.nonzero(np.isin(beam_range, peaks))[0]
-        prominences = peak_prominences(array_factor, peaks_in_beam)
-        score += np.average(prominences)
+        score += np.average(array_factor[beam_range])
     return score
 
 
@@ -86,40 +129,6 @@ def display(position, antenna, parameters, persist=False):
         plt.pause(0.05)
 
 
-def limit_position(particle_position):
-    """Limit magnitude (weights) of particle to 1 and wrap its angle (phase) [0, 2pi]"""
-    weights = np.clip(np.abs(particle_position), 0, 1)
-    phases = np.mod(np.angle(particle_position), 2 * np.pi)
-    return weights * np.exp(1j * phases)
-
-
-def limit_velocity(particle_velocity, parameters):
-    """Limit velocity of particle to max_particle_velocity and wrap direction [0, 2pi]"""
-    speed = np.clip(np.abs(particle_velocity), 0, parameters.max_particle_velocity)
-    direction = np.mod(np.angle(particle_velocity), 2 * np.pi)
-    return speed * np.exp(1j * direction)
-
-
-def move_particle(particle, best_known_position, antenna, parameters):
-    # TODO should the random numbers here be complex as well? or just reals?
-    inertial_component = parameters.intertia_weight * particle.velocity
-    cognitive_component = (
-        parameters.cognitive_coeff
-        * np.random.rand(antenna.num_elements)
-        * (np.subtract(particle.best_position, particle.position))
-    )
-    social_component = (
-        parameters.social_coeff
-        * np.random.rand(antenna.num_elements)
-        * (np.subtract(best_known_position, particle.position))
-    )
-    particle.velocity = limit_velocity(
-        inertial_component + cognitive_component + social_component, parameters
-    )
-    particle.position = limit_position(np.add(particle.position, particle.velocity))
-    return particle
-
-
 def get_best_position_in_range(population, index, neighbourhood_size):
     best_score = float("-inf")
     best_position = population[index].best_position
@@ -139,14 +148,11 @@ def step_PSO(population, global_best_position, global_best_score, antenna, param
         best_known_position = get_best_position_in_range(
             population, i, parameters.neighbourhood_size
         )
-        particle = move_particle(particle, best_known_position, antenna, parameters)
-        particle.score = fitness(particle.position, antenna, parameters)
+        particle.best_known_position = best_known_position
+        particle.step(antenna, parameters)
         if particle.score > global_best_score:
             global_best_position = particle.position
             global_best_score = particle.score
-        if particle.score > particle.best_score:
-            particle.best_position = particle.position
-            particle.best_score = particle.score
     return population, global_best_position, global_best_score
 
 
@@ -155,7 +161,7 @@ def particle_swarm_optimisation(antenna, parameters, logging):
     # setting these as an arbitrary member of the initialized population
     global_best_position = population[0].best_position
     global_best_score = population[0].best_score
-    for step in range(0, parameters.max_steps):
+    for step in range(parameters.max_steps):
         population, global_best_position, global_best_score = step_PSO(
             population, global_best_position, global_best_score, antenna, parameters
         )
