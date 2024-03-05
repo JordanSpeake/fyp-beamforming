@@ -5,11 +5,11 @@ from scipy.signal import find_peaks, peak_prominences
 
 class Particle:
     def __init__(self, antenna, parameters, fitness_function):
-        self.velocity = np.random.uniform(antenna.num_elements) * np.exp(
-            1j * np.random.uniform(antenna.num_elements) * 2 * np.pi
+        self.velocity = np.random.uniform(size=antenna.num_elements) * np.exp(
+            1j * np.random.uniform(size=antenna.num_elements) * 2 * np.pi
         )
-        self.position = np.random.uniform(antenna.num_elements) * np.exp(
-            1j * np.random.uniform(antenna.num_elements) * 2 * np.pi
+        self.position = np.random.uniform(size=antenna.num_elements) * np.exp(
+            1j * np.random.uniform(size=antenna.num_elements) * 2 * np.pi
         )
         self.best_position = self.position
         self.best_known_position = self.position
@@ -65,14 +65,46 @@ class Particle:
         direction = np.mod(np.angle(velocity), 2 * np.pi)
         self.velocity = speed * np.exp(1j * direction)
 
+    def set_best_known(self, new_best_known):
+        # TODO - should this check if the new_best_known is actually better?
+        self.best_known_position = new_best_known.position
+        self.best_known_score = new_best_known.score
 
-def new_population(antenna, parameters):
-    population = []
-    for i in range(parameters.population_size):
-        population.append(
-            Particle(antenna, parameters, lambda p: fitness(p, antenna, parameters))
+
+class Population:
+    def __init__(self, antenna, parameters):
+        self.population = []
+        for i in range(parameters.population_size):
+            self.population.append(
+                Particle(antenna, parameters, lambda p: fitness(p, antenna, parameters))
+            )
+        self.neighbourhood_size = parameters.neighbourhood_size
+        self.global_best_position = self.population[0].position
+        self.global_best_score = self.population[0].score
+
+    def step(self):
+        for index, particle in enumerate(
+            self.population
+        ):  # Update best-knowns for each particle
+            best_particle_in_neighbourhood = self.best_particle_in_neighbourhood(index)
+            particle.set_best_known(self.population[best_particle_in_neighbourhood])
+        for index, particle in enumerate(self.population):  # Step each particle
+            particle.step()
+            if particle.score > self.global_best_score:
+                self.global_best_position = particle.position
+                self.global_best_score = particle.score
+
+    def best_particle_in_neighbourhood(self, index):
+        neighbourhood = np.mod(
+            np.arange(index - self.neighbourhood_size, index + self.neighbourhood_size + 1),
+            len(self.population),
         )
-    return population
+        best_score = float("-inf")
+        best_particle_index = index
+        for i in neighbourhood:
+            if self.population[i].best_score > best_score:
+                best_particle_index = i
+        return best_particle_index
 
 
 def calculate_array_factor(position, antenna, parameters):
@@ -136,48 +168,16 @@ def display(position, antenna, parameters, persist=False):
         plt.pause(0.05)
 
 
-def get_best_position_in_range(population, index, neighbourhood_size):
-    best_score = float("-inf")
-    best_position = population[index].best_position
-    neighbourhood = np.mod(
-        np.arange(index - neighbourhood_size, index + neighbourhood_size + 1),
-        len(population),
-    )
-    for i in neighbourhood:
-        if population[i].best_score > best_score:
-            best_score = population[i].best_score
-            best_position = population[i].best_position
-    return best_position
-
-
-def step_PSO(population, global_best_position, global_best_score, parameters):
-    for i, particle in enumerate(population):
-        best_known_position = get_best_position_in_range(
-            population, i, parameters.neighbourhood_size
-        )
-        particle.best_known_position = best_known_position
-        particle.step()
-        if particle.score > global_best_score:
-            global_best_position = particle.position
-            global_best_score = particle.score
-    return population, global_best_position, global_best_score
-
-
 def particle_swarm_optimisation(antenna, parameters, logging):
-    population = new_population(antenna, parameters)
-    # setting these as an arbitrary member of the initialized population
-    global_best_position = population[0].best_position
-    global_best_score = population[0].best_score
-    for step in range(parameters.max_steps):
-        population, global_best_position, global_best_score = step_PSO(
-            population, global_best_position, global_best_score, parameters
-        )
+    population = Population(antenna, parameters)
+    for step_counter in range(parameters.max_steps):
+        population.step()
         if logging.verbose:
-            print(f"Step: {step}")
-            print(f"Position: {global_best_position}\n Score: {global_best_score}")
+            print(f"Step: {step_counter}")
+            print(f"Position: {population.global_best_position}\n Score: {population.global_best_score}")
         if logging.show_plots:
-            display(global_best_position, antenna, parameters)
-    return global_best_position
+            display(population.global_best_position, antenna, parameters)
+    return population.global_best_position
 
 
 def beamformer(antenna, parameters, logging):
