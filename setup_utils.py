@@ -22,7 +22,6 @@ class Parameters:
         max_steps,
         static_targets,
         beamwidth,
-        sidelobe_suppression,
         max_particle_velocity,
         neighbourhood_size,
     ):
@@ -34,10 +33,10 @@ class Parameters:
         self.intertia_weight = intertia_weight
         self.max_steps = max_steps
         self.targets = (
-            ((np.asarray(static_targets) / (2 * np.pi)) + 0.5) * samples - 1
+            ((np.asarray(static_targets, dtype=float) / (2 * np.pi)) + 0.5) * samples
+            - 1
         ).astype(int)
         self.beamwidth = beamwidth
         self.beamwidth_samples = np.asarray(beamwidth * samples / 2 * np.pi, dtype=int)
-        self.sidelobe_suppression = sidelobe_suppression
         self.max_particle_velocity = max_particle_velocity
         self.neighbourhood_size = neighbourhood_size

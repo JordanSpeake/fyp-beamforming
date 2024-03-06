@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_prominences
 
+
 class Particle:
     def __init__(self, antenna, parameters):
         self.velocity = np.random.uniform(size=antenna.num_elements) * np.exp(
@@ -77,13 +78,11 @@ class Population:
     def __init__(self, antenna, parameters):
         self.population = []
         for i in range(parameters.population_size):
-            self.population.append(
-                Particle(antenna, parameters)
-            )
+            self.population.append(Particle(antenna, parameters))
         self.neighbourhood_size = parameters.neighbourhood_size
         self.global_best_position = self.population[0].position
         self.global_best_score = self.population[0].score
-        self.fitness_function = lambda p : antenna.fitness(p, parameters)
+        self.fitness_function = lambda p: antenna.fitness(p, parameters)
 
     def step(self):
         """Take a single step in the simulation, update all particles once and recalculate best position"""
@@ -101,7 +100,9 @@ class Population:
     def best_particle_in_neighbourhood(self, index):
         """Find the best scoring particle in the neighbourhood (by particle index) of a given particle"""
         neighbourhood = np.mod(
-            np.arange(index - self.neighbourhood_size, index + self.neighbourhood_size + 1),
+            np.arange(
+                index - self.neighbourhood_size, index + self.neighbourhood_size + 1
+            ),
             len(self.population),
         )
         best_score = float("-inf")
@@ -148,7 +149,9 @@ def particle_swarm_optimisation(antenna, parameters, logging):
         population.step()
         if logging.verbose:
             print(f"Step: {step_counter}")
-            print(f"Position: {population.global_best_position}\n Score: {population.global_best_score}")
+            print(
+                f"Position: {population.global_best_position}\n Score: {population.global_best_score}"
+            )
         if logging.show_plots:
             display(population.global_best_position, antenna, parameters)
     return population.global_best_position
