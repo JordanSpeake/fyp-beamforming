@@ -27,7 +27,7 @@ class ULA:
         array_factor = 20 * np.log10(
             np.abs(self.far_zone_e_r(element_complex_weights, parameters))
         )
-        return array_factor  # - np.max(array_factor)
+        return array_factor  - np.max(array_factor)
 
     def far_zone_e_r(self, element_complex_weights, parameters):
         """Calculate the far-zone electric field of a given set of antenna element weights and phases"""

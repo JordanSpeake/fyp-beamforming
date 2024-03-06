@@ -4,11 +4,6 @@ import numpy as np
 from dataclasses import dataclass
 
 @dataclass
-class Result:
-    best_position_history = []
-    best_score_history = []
-
-@dataclass
 class Logging:
     show_plots: bool = False
     plots_persist: bool = False

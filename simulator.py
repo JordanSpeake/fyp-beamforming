@@ -21,7 +21,6 @@ def parse_config(path_to_config):
         if logging is None:
             return None
         try:
-            # TODO replace this feature and just use the file's name
             config_name = data["config_name"]
         except KeyError as e:
             config_name = "untitled_config"
@@ -95,6 +94,13 @@ def touch_output_file(config_name):
     output_path = f"./{config_name}_{datetime_marker}.csv"
     with open(output_path, 'w') as file:
         writer = csv.writer(file, dialect='excel')
+    return output_path
+
+def export_result(result, output_path):
+    with open(output_path, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=result[0].keys(), dialect="excel")
+        writer.writeheader()
+        writer.writerows(result)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -108,7 +114,8 @@ def main():
     arguments = parser.parse_args()
     config = get_config(arguments)
     if config is None: return
-    touch_output_file(config["config_name"])
-    result = bf.beamformer(config["antenna"], config["parameters"], config["logging"], setup_utils.Result())
+    output_path = touch_output_file(config["config_name"])
+    result = bf.beamformer(config["antenna"], config["parameters"], config["logging"])
+    export_result(result, output_path)
 
 main()

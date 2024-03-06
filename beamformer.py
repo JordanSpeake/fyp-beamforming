@@ -143,24 +143,27 @@ def display(position, antenna, parameters, persist=False):
         plt.pause(0.05)
 
 
-def particle_swarm_optimisation(antenna, parameters, logging, result):
+def particle_swarm_optimisation(antenna, parameters, logging):
     population = Population(antenna, parameters)
+    result = []
     for step_counter in range(parameters.max_steps):
         population.step()
-        result.best_position_history.append(population.global_best_position)
-        result.best_score_history.append(population.global_best_score)
+        result.append({
+            "best_position_history" : population.global_best_position,
+            "best_score_history" : population.global_best_score,
+        })
         if logging.verbose:
-            print(f"Step: {step_counter}")
+            print(f"Step: {step_counter}/{parameters.max_steps-1}")
             print(
                 f"Position: {population.global_best_position}\n Score: {population.global_best_score}"
             )
         if logging.show_plots:
             display(population.global_best_position, antenna, parameters)
-    return population.global_best_position
+    return result
 
 
-def beamformer(antenna, parameters, logging, result):
-    particle_swarm_optimisation(antenna, parameters, logging, result)
+def beamformer(antenna, parameters, logging):
+    result = particle_swarm_optimisation(antenna, parameters, logging)
     if logging.show_plots and logging.plots_persist:
-        display(result, antenna, parameters, persist=True)
+        display(result[-1]["best_position_history"], antenna, parameters, persist=True)
     return result
