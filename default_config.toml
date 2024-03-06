@@ -1,22 +1,27 @@
+# Used to name the output.csv file
+config_name = "default_config"
+
+# Specify type of antenna and it's properties
 [antenna]
 type = "ULA"
 frequency = 2e9
 spacing_coeff = 0.5
 num_elements = 3
 
+# Specify simulation parameters
 [parameters]
 population_size = 100
 samples = 1440
 cognitive_coeff = 0.1
 social_coeff = 0.1
 inertia_weight = 0.1
-max_steps = 500
+max_steps = 50
 static_targets = [1.0]
 beamwidth = 0.05
 max_particle_velocity = 1
 neighbourhood_size=  10
 
-
+# Specify whether to plot values as they're calculated.
 [logging]
 show_plots = true
 plots_persist = true

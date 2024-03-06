@@ -1,6 +1,6 @@
 import beamformer as bf
 import numpy as np
-import argparse, setup_utils, antennas
+import argparse, setup_utils, antennas, csv, datetime
 
 try:
     import tomlib
@@ -20,7 +20,13 @@ def parse_config(path_to_config):
         logging = parse_logging_config(data["logging"])
         if logging is None:
             return None
+        try:
+            # TODO replace this feature and just use the file's name
+            config_name = data["config_name"]
+        except KeyError as e:
+            config_name = "untitled_config"
         return {
+            "config_name" : config_name,
             "antenna": antenna,
             "parameters": parameters,
             "logging": logging,
@@ -33,8 +39,8 @@ def parse_antenna_config(data):
             antenna = antennas.ULA(
                 data["frequency"], data["spacing_coeff"], data["num_elements"]
             )
-        except KeyError:
-            print("Failed to parse antenna config")
+        except KeyError as e:
+            print(f"Failed to parse antenna config: {e}")
             return None
     return antenna
 
@@ -53,8 +59,8 @@ def parse_parameters_config(data):
             max_particle_velocity=data["max_particle_velocity"],
             neighbourhood_size=data["neighbourhood_size"],
         )
-    except KeyError:
-        print("Failed to parse parameters config")
+    except KeyError as e:
+        print(f"Failed to parse parameters config: {e}")
         return None
     return parameters
 
@@ -66,11 +72,29 @@ def parse_logging_config(data):
             plots_persist=data["plots_persist"],
             verbose=data["verbose"],
         )
-    except KeyError:
-        print("Failed to parse logging config")
+    except KeyError as e:
+        print("Failed to parse logging config: {e}")
         return None
     return logging
 
+
+def get_config(args):
+    try:
+        path_to_config = args.config[0]
+    except SystemExit:
+        print("Invalid path to config file")
+        return None
+    config = parse_config(path_to_config)
+    if config is None:
+        print(f"Error in config file: {path_to_config}")
+        return None
+    return config
+
+def touch_output_file(config_name):
+    datetime_marker = datetime.datetime.now().strftime("%Y%m%d-%H_%M_%S")
+    output_path = f"./{config_name}_{datetime_marker}.csv"
+    with open(output_path, 'w') as file:
+        writer = csv.writer(file, dialect='excel')
 
 def main():
     parser = argparse.ArgumentParser()
@@ -81,16 +105,10 @@ def main():
         required=True,
         help="--config ./path/to/config.toml",
     )
-    try:
-        path_to_config = parser.parse_args().config[0]
-    except SystemExit:
-        print("Invalid path to config file")
-        return
-    config = parse_config(path_to_config)
-    if config is None:
-        print(f"Error in config file: {path_to_config}")
-        return
-    result = bf.beamformer(config["antenna"], config["parameters"], config["logging"])
-
+    arguments = parser.parse_args()
+    config = get_config(arguments)
+    if config is None: return
+    touch_output_file(config["config_name"])
+    result = bf.beamformer(config["antenna"], config["parameters"], config["logging"], setup_utils.Result())
 
 main()

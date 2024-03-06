@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_prominences
-
+from dataclasses import dataclass
 
 class Particle:
     def __init__(self, antenna, parameters):
@@ -143,10 +143,12 @@ def display(position, antenna, parameters, persist=False):
         plt.pause(0.05)
 
 
-def particle_swarm_optimisation(antenna, parameters, logging):
+def particle_swarm_optimisation(antenna, parameters, logging, result):
     population = Population(antenna, parameters)
     for step_counter in range(parameters.max_steps):
         population.step()
+        result.best_position_history.append(population.global_best_position)
+        result.best_score_history.append(population.global_best_score)
         if logging.verbose:
             print(f"Step: {step_counter}")
             print(
@@ -157,8 +159,8 @@ def particle_swarm_optimisation(antenna, parameters, logging):
     return population.global_best_position
 
 
-def beamformer(antenna, parameters, logging):
-    result = particle_swarm_optimisation(antenna, parameters, logging)
+def beamformer(antenna, parameters, logging, result):
+    particle_swarm_optimisation(antenna, parameters, logging, result)
     if logging.show_plots and logging.plots_persist:
         display(result, antenna, parameters, persist=True)
     return result
