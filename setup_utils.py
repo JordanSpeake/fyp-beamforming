@@ -41,14 +41,3 @@ class Parameters:
         self.sidelobe_suppression = sidelobe_suppression
         self.max_particle_velocity = max_particle_velocity
         self.neighbourhood_size = neighbourhood_size
-
-
-class ULA:
-    def __init__(self, frequency, spacing_coeff, num_elements):
-        self.num_elements = num_elements
-        self.frequency = frequency
-        self.wavelength = 3e9 / frequency
-        self.spacing = self.wavelength * spacing_coeff
-        N = (num_elements - 1) / 2
-        self.positions = np.linspace(self.spacing * -N, self.spacing * N, num_elements)
-        self.wavenumber = 2 * np.pi / self.wavelength

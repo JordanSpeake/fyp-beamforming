@@ -1,10 +1,11 @@
 import beamformer as bf
 import numpy as np
 import setup_utils
+import antennas
 
 
 def main():
-    antenna = setup_utils.ULA(2e9, 0.5, 15)
+    antenna = antennas.ULA(2e9, 0.5, 3)
     parameters = setup_utils.Parameters(
         population_size=100,
         samples=360 * 4,
