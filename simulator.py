@@ -75,7 +75,7 @@ def parse_logging_config(data):
             show_plots=data["show_plots"],
             plots_persist=data["plots_persist"],
             verbose=data["verbose"],
-            csv_output=data["csv_output"],
+            debug=data["debug"],
         )
     except KeyError as e:
         print("Failed to parse logging config: {e}")
@@ -115,11 +115,15 @@ def main():
     config = get_config(arguments)
     if config is None:
         return
-    if config["logging"].csv_output:
+    antenna = config["antenna"]
+    parameters = config["parameters"]
+    logging = config["logging"]
+    config_name = config["config_name"]
+    if not logging.debug:
         output_path = get_output_path(config["config_name"])
         with open(output_path, "w", newline="", encoding="utf-8") as file:
             try:
-                result = bf.beamformer(config)
+                result = bf.beamformer(antenna, parameters, logging, config_name)
             except Exception as e:
                 print(f"Simulation cancelled, error in beamformer.py: {e}")
             else:
@@ -130,7 +134,8 @@ def main():
                 writer.writerows(result)
             print(f"Simulation results written successfully")
     else:
-        bf.beamformer(config)
+        print(f"DEBUG: {config_name}")
+        _ = bf.beamformer(antenna, parameters, logging, config_name)
     print("Done.")
 
 

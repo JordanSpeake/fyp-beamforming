@@ -143,21 +143,21 @@ def particle_swarm_optimisation(antenna, parameters, logging):
     return result
 
 
-def beamformer(config):
-    antenna = config["antenna"]
-    parameters = config["parameters"]
-    logging = config["logging"]
-
-    if logging.verbose:
-        config_name = config["config_name"]
-        print(f"Starting simulation: {config_name}")
-    result = particle_swarm_optimisation(antenna, parameters, logging)
-    if logging.verbose:
-        print("Simulation stopped")
-    if logging.show_plots:
-        antenna.display(
-            result[-1]["best_position_history"],
-            parameters,
-            persist=logging.plots_persist,
-        )
-    return result
+def beamformer(antenna, parameters, logging, config_name):
+    if logging.debug:
+        debug_particle = Particle(antenna, parameters, uniform=True)
+        antenna.display(debug_particle.position, parameters, persist=True)
+        return None
+    else:
+        if logging.verbose:
+            print(f"Starting simulation: {config_name}")
+        result = particle_swarm_optimisation(antenna, parameters, logging)
+        if logging.verbose:
+            print("Simulation stopped")
+        if logging.show_plots:
+            antenna.display(
+                result[-1]["best_position_history"],
+                parameters,
+                persist=logging.plots_persist,
+            )
+        return result

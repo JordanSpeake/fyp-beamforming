@@ -7,7 +7,7 @@ class Logging:
     show_plots: bool = False
     plots_persist: bool = False
     verbose: bool = False
-    csv_output: bool = True
+    debug: bool = False
 
 
 class Parameters:
