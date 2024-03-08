@@ -30,16 +30,21 @@ class UniformLinear:
         """Calculate the array factor of a given set of antenna element weights and phases"""
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        theta = parameters.theta
         array_factor = np.zeros(parameters.samples, dtype=complex)
-        for i, theta_val in enumerate(theta):
-            exponent = self.wavenumber * np.sin(theta_val) * self.positions + phases
-            array_factor[i] = np.sum(weights * np.exp(1j * exponent))
+        for k in range(self.num_elements):
+            exponent = phases[k] + (
+                self.wavenumber
+                * self.positions[k]
+                * np.sin(parameters.theta)
+            )
+            array_factor += weights[k] * np.exp(1j * exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
+        print(array_factor)
         return array_factor
 
     def display(self, element_complex_weights, parameters, persist):
-        array_factor = antenna.array_factor(position, parameters)
+        array_factor = self.array_factor(element_complex_weights, parameters)
+        plt.clf()
         plt.plot(parameters.theta, array_factor)
 
         # targets_markers = (2 * np.pi * parameters.targets / parameters.samples) - np.pi
@@ -59,7 +64,6 @@ class UniformLinear:
         plt.ylim((-40, 0))
         plt.xlabel("Beam angle [rad]")
         plt.ylabel("Power [dB]")
-        plt.clf()
         if persist:
             plt.show()
         else:
