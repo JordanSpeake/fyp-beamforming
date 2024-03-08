@@ -90,18 +90,14 @@ class Circular:
     def array_factor(self, element_complex_weights, parameters):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        theta = parameters.theta
-        phi = parameters.phi
         array_factor = np.zeros((parameters.samples, parameters.samples), dtype=complex)
-        for i in range(len(phi)):
-            for j in range(len(theta)):
-                exponent = phases - (
-                    self.wavenumber
-                    * self.radius
-                    * np.cos(phi[i] - self.element_angles)
-                    * np.sin(theta[j])
-                )
-                array_factor[i][j] = np.sum(weights * np.exp(1j * exponent))
+        for k in range(self.num_elements):
+            sin_thetas = np.atleast_2d(np.sin(parameters.theta))
+            cos_phi_deltas = np.atleast_2d(
+                np.cos(parameters.phi - self.element_angles[k])).T
+            sin_cos_product = np.matmul(cos_phi_deltas, sin_thetas)
+            exponent = phases[k] - self.wavenumber * self.radius * sin_cos_product
+            array_factor += weights[k] * np.exp(1j * exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
