@@ -1,16 +1,21 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from scipy.signal import find_peaks, peak_prominences
 from dataclasses import dataclass
+import visualiser
 
 class Particle:
-    def __init__(self, antenna, parameters):
-        self.velocity = np.random.uniform(size=antenna.num_elements) * np.exp(
-            1j * np.random.uniform(size=antenna.num_elements) * 2 * np.pi
-        )
-        self.position = np.random.uniform(size=antenna.num_elements) * np.exp(
-            1j * np.random.uniform(size=antenna.num_elements) * 2 * np.pi
-        )
+    def __init__(self, antenna, parameters, uniform=False):
+        if uniform:
+            self.velocity = np.zeros(antenna.num_elements) * np.exp(
+                1j * np.zeros(antenna.num_elements) * 2 * np.pi
+            )
+            self.position = np.ones(antenna.num_elements, dtype=complex)
+        else:
+            self.velocity = np.random.uniform(size=antenna.num_elements) * np.exp(
+                1j * np.random.uniform(size=antenna.num_elements) * 2 * np.pi
+            )
+            self.position = np.random.uniform(size=antenna.num_elements) * np.exp(
+                1j * np.random.uniform(size=antenna.num_elements) * 2 * np.pi
+            )
         self.best_position = self.position
         self.best_known_position = self.position
         self.score = antenna.fitness(self.position, parameters)
@@ -113,36 +118,6 @@ class Population:
         return best_particle_index
 
 
-def display(position, antenna, parameters, persist=False):
-    array_factor = antenna.array_factor(position, parameters)
-    plt.clf()
-    plt.plot(parameters.phi, array_factor)
-
-    targets_markers = (2 * np.pi * parameters.targets / parameters.samples) - np.pi
-    for target in targets_markers:
-        plt.axvspan(
-            target - parameters.beamwidth,
-            target + parameters.beamwidth,
-            color="green",
-            alpha=0.5,
-        )
-
-    peaks, _ = find_peaks(array_factor, height=-50, distance=5)
-    peak_angles = (2 * np.pi * peaks / parameters.samples) - np.pi
-    plt.plot(peak_angles, array_factor[peaks], "X", color="orange")
-
-    # print(f"sidelobe: {sidelobe_level}")
-    # plt.axhline(sidelobe_level, color="orange", alpha=0.5)
-    plt.xlim(-np.pi / 2, np.pi / 2)
-    plt.ylim((-40, 0))
-    plt.xlabel("Beam angle [rad]")
-    plt.ylabel("Power [dB]")
-    if persist:
-        plt.show()
-    else:
-        plt.pause(0.05)
-
-
 def particle_swarm_optimisation(antenna, parameters, logging):
     population = Population(antenna, parameters)
     result = []
@@ -158,12 +133,15 @@ def particle_swarm_optimisation(antenna, parameters, logging):
                 f"Position: {population.global_best_position}\n Score: {population.global_best_score}"
             )
         if logging.show_plots:
-            display(population.global_best_position, antenna, parameters)
+            visualiser.display(population.global_best_position, antenna, parameters, persist=logging.plots_persist)
     return result
 
 
-def beamformer(antenna, parameters, logging):
+def beamformer(config):
+    antenna = config["antenna"]
+    parameters = config["parameters"]
+    logging = config["logging"]
     result = particle_swarm_optimisation(antenna, parameters, logging)
-    if logging.show_plots and logging.plots_persist:
-        display(result[-1]["best_position_history"], antenna, parameters, persist=True)
+    if logging.show_plots:
+        visualiser.display(result[-1]["best_position_history"], antenna, parameters, persist=logging.plots_persist)
     return result

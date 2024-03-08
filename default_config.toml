@@ -3,9 +3,9 @@ config_name = "default_config"
 
 # Specify type of antenna and it's properties
 [antenna]
-type = "ULA"
-frequency = 2e9
-spacing_coeff = 0.5
+type = "UniformLinear"
+frequency = 3e9
+spacing = 0.09
 num_elements = 8
 
 # Specify simulation parameters

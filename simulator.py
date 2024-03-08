@@ -33,15 +33,20 @@ def parse_config(path_to_config):
 
 
 def parse_antenna_config(data):
-    if data["type"] == "ULA":
-        try:
-            antenna = antennas.ULA(
-                data["frequency"], data["spacing_coeff"], data["num_elements"]
+    try:
+        if data["type"] == "UniformLinear":
+            return antennas.UniformLinear(
+                data["frequency"], data["spacing"], data["num_elements"]
             )
-        except KeyError as e:
-            print(f"Failed to parse antenna config: {e}")
-            return None
-    return antenna
+        elif data["type"] == "Circular":
+            return antennas.Circular(
+                data["frequency"], data["radius"], data["num_elements"]
+            )
+    except KeyError as e:
+        print(f"Failed to parse antenna config: {e}")
+        return None
+    print(f"No/invalid specified antenna")
+    return None
 
 
 def parse_parameters_config(data):
@@ -70,6 +75,7 @@ def parse_logging_config(data):
             show_plots=data["show_plots"],
             plots_persist=data["plots_persist"],
             verbose=data["verbose"],
+            csv_output=data["csv_output"],
         )
     except KeyError as e:
         print("Failed to parse logging config: {e}")
@@ -114,8 +120,11 @@ def main():
     arguments = parser.parse_args()
     config = get_config(arguments)
     if config is None: return
-    output_path = touch_output_file(config["config_name"])
-    result = bf.beamformer(config["antenna"], config["parameters"], config["logging"])
-    export_result(result, output_path)
+    if config["logging"].csv_output:
+        # TODO maybe use `with` here to keep a lock on the file while a write is expected?
+        output_path = touch_output_file(config["config_name"])
+    result = bf.beamformer(config)
+    if config["logging"].csv_output:
+        export_result(result, output_path)
 
 main()
