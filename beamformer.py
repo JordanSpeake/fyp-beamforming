@@ -1,6 +1,5 @@
 import numpy as np
 from dataclasses import dataclass
-import visualiser
 
 
 class Particle:
@@ -136,9 +135,8 @@ def particle_swarm_optimisation(antenna, parameters, logging):
                 f"Position: {population.global_best_position}\n Score: {population.global_best_score}"
             )
         if logging.show_plots:
-            visualiser.display(
+            antenna.display(
                 population.global_best_position,
-                antenna,
                 parameters,
                 persist=logging.plots_persist,
             )
@@ -149,11 +147,16 @@ def beamformer(config):
     antenna = config["antenna"]
     parameters = config["parameters"]
     logging = config["logging"]
+
+    if logging.verbose:
+        config_name = config["config_name"]
+        print(f"Starting simulation: {config_name}")
     result = particle_swarm_optimisation(antenna, parameters, logging)
+    if logging.verbose:
+        print("Simulation stopped")
     if logging.show_plots:
-        visualiser.display(
+        antenna.display(
             result[-1]["best_position_history"],
-            antenna,
             parameters,
             persist=logging.plots_persist,
         )

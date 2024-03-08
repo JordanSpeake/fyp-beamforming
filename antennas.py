@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class UniformLinear:
@@ -37,6 +38,34 @@ class UniformLinear:
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
+    def display(self, element_complex_weights, parameters, persist):
+        array_factor = antenna.array_factor(position, parameters)
+        plt.plot(parameters.theta, array_factor)
+
+        # targets_markers = (2 * np.pi * parameters.targets / parameters.samples) - np.pi
+        # for target in targets_markers:
+        #     plt.axvspan(
+        #         target - parameters.beamwidth,
+        #         target + parameters.beamwidth,
+        #         color="green",
+        #         alpha=0.5,
+        #     )
+
+        # peaks, _ = find_peaks(array_factor, height=-50, distance=5)
+        # peak_angles = (2 * np.pi * peaks / parameters.samples) - np.pi
+        # plt.plot(peak_angles, array_factor[peaks], "X", color="orange")
+
+        plt.xlim(-np.pi / 2, np.pi / 2)
+        plt.ylim((-40, 0))
+        plt.xlabel("Beam angle [rad]")
+        plt.ylabel("Power [dB]")
+        plt.clf()
+        if persist:
+            plt.show()
+        else:
+            plt.pause(0.05)
+
+
 class Circular:
     def __init__(self, frequency, radius, num_elements):
         self.radius = radius
@@ -48,6 +77,8 @@ class Circular:
         )
         self.wavenumber = 2 * np.pi / self.wavelength
         self.dimensions = 2
+        self.figure = plt.figure()
+        self.axes = self.figure.add_subplot(projection="3d")
 
     def fitness(self, element_complex_weights, parameters):
         array_factor = self.array_factor(element_complex_weights, parameters)
@@ -55,7 +86,6 @@ class Circular:
         for target in parameters.targets:
             score += array_factor[target[0]][target[1]]
         return score
-
 
     def array_factor(self, element_complex_weights, parameters):
         phases = np.angle(element_complex_weights)
@@ -74,3 +104,13 @@ class Circular:
                 array_factor[i][j] = np.sum(weights * np.exp(1j * exponent))
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
+
+    def display(self, element_complex_weights, parameters, persist):
+        array_factor = self.array_factor(element_complex_weights, parameters)
+        R, P = np.meshgrid(parameters.phi, parameters.theta)
+        X, Y = R * np.cos(P), R * np.sin(P)
+        self.axes.plot_surface(X, Y, array_factor, cmap=plt.cm.YlGnBu_r)
+        if persist:
+            plt.show()
+        else:
+            plt.pause(0.05)

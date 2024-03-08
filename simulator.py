@@ -121,16 +121,17 @@ def main():
             try:
                 result = bf.beamformer(config)
             except Exception as e:
-                print(f"Error in beamformer: {e}")
-                result = []
-            finally:
+                print(f"Simulation cancelled, error in beamformer.py: {e}")
+            else:
                 writer = csv.DictWriter(
                     file, fieldnames=result[0].keys(), dialect="excel"
                 )
                 writer.writeheader()
                 writer.writerows(result)
+            print(f"Simulation results written successfully")
     else:
-        _ = bf.beamformer(config)
+        bf.beamformer(config)
+    print("Done.")
 
 
 main()
