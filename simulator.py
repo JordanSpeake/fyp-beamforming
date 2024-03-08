@@ -25,7 +25,7 @@ def parse_config(path_to_config):
         except KeyError as e:
             config_name = "untitled_config"
         return {
-            "config_name" : config_name,
+            "config_name": config_name,
             "antenna": antenna,
             "parameters": parameters,
             "logging": logging,
@@ -95,18 +95,12 @@ def get_config(args):
         return None
     return config
 
-def touch_output_file(config_name):
+
+def get_output_path(config_name):
     datetime_marker = datetime.datetime.now().strftime("%Y%m%d-%H_%M_%S")
     output_path = f"./{config_name}_{datetime_marker}.csv"
-    with open(output_path, 'w') as file:
-        writer = csv.writer(file, dialect='excel')
     return output_path
 
-def export_result(result, output_path):
-    with open(output_path, 'w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=result[0].keys(), dialect="excel")
-        writer.writeheader()
-        writer.writerows(result)
 
 def main():
     parser = argparse.ArgumentParser()
@@ -119,12 +113,24 @@ def main():
     )
     arguments = parser.parse_args()
     config = get_config(arguments)
-    if config is None: return
+    if config is None:
+        return
     if config["logging"].csv_output:
-        # TODO maybe use `with` here to keep a lock on the file while a write is expected?
-        output_path = touch_output_file(config["config_name"])
-    result = bf.beamformer(config)
-    if config["logging"].csv_output:
-        export_result(result, output_path)
+        output_path = get_output_path(config["config_name"])
+        with open(output_path, "w", newline="", encoding="utf-8") as file:
+            try:
+                result = bf.beamformer(config)
+            except Exception as e:
+                print(f"Error in beamformer: {e}")
+                result = []
+            finally:
+                writer = csv.DictWriter(
+                    file, fieldnames=result[0].keys(), dialect="excel"
+                )
+                writer.writeheader()
+                writer.writerows(result)
+    else:
+        _ = bf.beamformer(config)
+
 
 main()

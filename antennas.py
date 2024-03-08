@@ -1,7 +1,9 @@
 import numpy as np
 
+
 class UniformLinear:
     """A uniform linear array antenna, centered on 0,0,0"""
+
     def __init__(self, frequency, spacing, num_elements):
         self.frequency = frequency
         self.spacing = spacing
@@ -30,10 +32,11 @@ class UniformLinear:
         theta = parameters.theta
         array_factor = np.zeros(parameters.samples, dtype=complex)
         for i, theta_val in enumerate(theta):
-            exponent = self.wavenumber * np.sin(theta_val)  * self.positions + phases
-            array_factor[i] = np.sum(weights * np.exp(1j *  exponent))
+            exponent = self.wavenumber * np.sin(theta_val) * self.positions + phases
+            array_factor[i] = np.sum(weights * np.exp(1j * exponent))
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
+
 
 class Circular:
     def __init__(self, frequency, radius, num_elements):
@@ -41,13 +44,14 @@ class Circular:
         self.num_elements = num_elements
         self.frequency = frequency
         self.wavelength = 3e9 / frequency
-        self.element_angles = np.linspace(0, 2*np.pi-(2*np.pi/num_elements), num_elements)
+        self.element_angles = np.linspace(
+            0, 2 * np.pi - (2 * np.pi / num_elements), num_elements
+        )
         self.wavenumber = 2 * np.pi / self.wavelength
         self.dimensions = 2
 
     def fitness(self, element_complex_weights, parameters):
         return 0
-
 
     def array_factor(self, element_complex_weights, parameters):
         phases = np.angle(element_complex_weights)
@@ -55,10 +59,14 @@ class Circular:
         theta = parameters.theta
         phi = parameters.phi
         array_factor = np.zeros((parameters.samples, parameters.samples), dtype=complex)
-        print(np.shape(array_factor))
         for i in range(len(phi)):
             for j in range(len(theta)):
-                    exponent = phases - (self.wavenumber * self.radius * np.cos(phi[i] - self.element_angles) *np.sin(theta[j]))
-                    array_factor[i][j] = np.sum(weights * np.exp(1j * exponent))
+                exponent = phases - (
+                    self.wavenumber
+                    * self.radius
+                    * np.cos(phi[i] - self.element_angles)
+                    * np.sin(theta[j])
+                )
+                array_factor[i][j] = np.sum(weights * np.exp(1j * exponent))
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor

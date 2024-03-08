@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_prominences
 
+
 def display(position, antenna, parameters, persist=False):
     if antenna.dimensions == 1:
         display1D(position, antenna, parameters, persist)
@@ -10,10 +11,11 @@ def display(position, antenna, parameters, persist=False):
     else:
         print("Cannot display array factor, bad dimensions.")
 
+
 def display2D(position, antenna, parameters, persist):
     array_factor = antenna.array_factor(position, parameters)
     plt.subplot(2, 1, 1)
-    plt.imshow(array_factor, interpolation='bilinear')
+    plt.imshow(array_factor, interpolation="bilinear")
     # X, Y = np.meshgrid(parameters.theta, parameters.phi)
     # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
     # ax.plot_surface(X, Y, array_factor)

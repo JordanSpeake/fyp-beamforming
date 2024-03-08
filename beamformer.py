@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import dataclass
 import visualiser
 
+
 class Particle:
     def __init__(self, antenna, parameters, uniform=False):
         if uniform:
@@ -123,17 +124,24 @@ def particle_swarm_optimisation(antenna, parameters, logging):
     result = []
     for step_counter in range(parameters.max_steps):
         population.step()
-        result.append({
-            "best_position_history" : population.global_best_position,
-            "best_score_history" : population.global_best_score,
-        })
+        result.append(
+            {
+                "best_position_history": population.global_best_position,
+                "best_score_history": population.global_best_score,
+            }
+        )
         if logging.verbose:
             print(f"Step: {step_counter}/{parameters.max_steps-1}")
             print(
                 f"Position: {population.global_best_position}\n Score: {population.global_best_score}"
             )
         if logging.show_plots:
-            visualiser.display(population.global_best_position, antenna, parameters, persist=logging.plots_persist)
+            visualiser.display(
+                population.global_best_position,
+                antenna,
+                parameters,
+                persist=logging.plots_persist,
+            )
     return result
 
 
@@ -143,5 +151,10 @@ def beamformer(config):
     logging = config["logging"]
     result = particle_swarm_optimisation(antenna, parameters, logging)
     if logging.show_plots:
-        visualiser.display(result[-1]["best_position_history"], antenna, parameters, persist=logging.plots_persist)
+        visualiser.display(
+            result[-1]["best_position_history"],
+            antenna,
+            parameters,
+            persist=logging.plots_persist,
+        )
     return result
