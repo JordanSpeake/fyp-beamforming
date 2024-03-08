@@ -14,16 +14,19 @@ def display(position, antenna, parameters, persist=False):
 
 def display2D(position, antenna, parameters, persist):
     array_factor = antenna.array_factor(position, parameters)
-    plt.subplot(2, 1, 1)
-    plt.imshow(array_factor, interpolation="bilinear")
-    # X, Y = np.meshgrid(parameters.theta, parameters.phi)
-    # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-    # ax.plot_surface(X, Y, array_factor)
-    # plt.xlim(-np.pi / 2, np.pi / 2)
-    # plt.ylim((-40, 0))
-    # plt.xlabel("Beam angle [rad]")
-    # plt.ylabel("Power [dB]")
-    plt.show()
+
+    R, P = np.meshgrid(parameters.phi, parameters.theta)
+    X, Y = R*np.cos(P), R*np.sin(P)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.plot_surface(X, Y, array_factor, cmap=plt.cm.YlGnBu_r)
+
+    if persist:
+        plt.show()
+    else:
+        plt.pause(0.05)
+
 
 
 def display1D(position, antenna, parameters, persist):
