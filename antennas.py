@@ -37,7 +37,6 @@ class UniformLinear:
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
-
 class Circular:
     def __init__(self, frequency, radius, num_elements):
         self.radius = radius
@@ -51,7 +50,12 @@ class Circular:
         self.dimensions = 2
 
     def fitness(self, element_complex_weights, parameters):
-        return 0
+        array_factor = self.array_factor(element_complex_weights, parameters)
+        score = 0
+        for target in parameters.targets:
+            score += array_factor[target[0]][target[1]]
+        return score
+
 
     def array_factor(self, element_complex_weights, parameters):
         phases = np.angle(element_complex_weights)
