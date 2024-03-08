@@ -149,14 +149,12 @@ def beamformer(config):
     antenna = config["antenna"]
     parameters = config["parameters"]
     logging = config["logging"]
-    test_particle = Particle(antenna, parameters, uniform=True)
-    visualiser.display(test_particle.position, antenna, parameters, persist=True)
-    # result = particle_swarm_optimisation(antenna, parameters, logging)
-    # if logging.show_plots:
-    #     visualiser.display(
-    #         result[-1]["best_position_history"],
-    #         antenna,
-    #         parameters,
-    #         persist=logging.plots_persist,
-    #     )
-    # return result
+    result = particle_swarm_optimisation(antenna, parameters, logging)
+    if logging.show_plots:
+        visualiser.display(
+            result[-1]["best_position_history"],
+            antenna,
+            parameters,
+            persist=logging.plots_persist,
+        )
+    return result
