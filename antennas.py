@@ -114,3 +114,24 @@ class Circular:
             plt.show()
         else:
             plt.pause(0.05)
+
+
+class RectangularPlanar:
+    # TODO
+    def __init__(self, frequency, spacing, num_elements):
+        """Definition for a RPA. 'spacing' and 'num_elements' must be given in tuple form (x, y)"""
+        self.frequency = frequency
+        self.spacing_x: int = spacing[0]
+        self.spacing_y: int = spacing[1]
+        self.num_elements_x: int = num_elements[0]
+        self.num_elements_y: int = num_elements[1]
+        self.wavelength = 3e9 / frequency
+        self.wavenumber = 2 * np.pi / self.wavelength
+        x = np.linspace(0, 1, self.num_elements_x)
+        y = np.linspace(0, 1, self.num_elements_y)
+        self.x_coords, self.y_coords = np.meshgrid(x, y)
+
+    def array_factor(self, element_complex_weights, parameters):
+        phases = np.angle(element_complex_weights)
+        weights = np.abs(element_complex_weights)
+        array_factor = np.zeros((parameters.samples, parameters.samples), dtype=complex)
