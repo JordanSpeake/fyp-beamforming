@@ -1,11 +1,6 @@
-from cgitb import small
-from re import purge
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools
-import copy
-
-from pyparsing import col
 
 """An implementation of Donald Knuth's Dancing Links Algorithm X"""
 """https://arxiv.org/pdf/cs/0011047.pdf"""
@@ -175,6 +170,8 @@ def search(dll_2d, solution, k):
 
 def generate_starting_matrix(num_elements, polyomino_size):
     """Generate a matrix representing the exact cover problem of a given array and polyomino size"""
+    # TODO - this generated array is TOO LARGE!
+    # Can it be evaluated in another way? Can the DLL be directly generated?
     result = []
     for bits in itertools.combinations(range(num_elements), polyomino_size):
         row = np.zeros(num_elements, dtype=int)
@@ -183,9 +180,25 @@ def generate_starting_matrix(num_elements, polyomino_size):
     return np.asarray(result)
 
 
+def display(array, solution):
+    fig = plt.figure()
+    ax = fig.gca()
+    ax.set_xticks(np.arange(start=0, stop=array[0]+1, step=1))
+    ax.set_yticks(np.arange(start=0, stop=array[1]+1, step=1))
+    plt.grid(True)
+    colours = ["black", "blue", "orange", "green", "red"]
+    for r, row in enumerate(solution):
+        color = colours[np.mod(r, len(colours))]
+        for e, element in enumerate(row):
+            if element == 1:
+                x, y = np.divmod(e, array[0])
+                plt.fill_between([x, x+1], y, y-1, color=color)
+    plt.show()
+
 def main():
-    array = np.zeros((4, 4), dtype=int)
-    polyomino_size = 8
+    array_dimensions = (10, 12)
+    array = np.zeros(array_dimensions, dtype=int)
+    polyomino_size = 10
     assert np.mod(array.size, polyomino_size) == 0
     print(f"Creating solution matrix for:\n    Array: {array.shape}\n    Polyomino: {polyomino_size}")
     solution_matrix = generate_starting_matrix(array.size, polyomino_size)
@@ -195,6 +208,7 @@ def main():
     solution = []
     solution = search(dll_2d, solution, k=0)
     print(f"Solution: {solution}")
+    display(array_dimensions, solution)
 
 
 main()
