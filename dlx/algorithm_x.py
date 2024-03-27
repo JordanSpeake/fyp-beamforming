@@ -135,7 +135,7 @@ class DLL_2D:
         header.left.right = header
 
 
-def search(dll_2d, solution, k):
+def search(dll_2d, solution, array_dimensions, k):
     if dll_2d.main_header.right is dll_2d.main_header:
         return solution
     c = dll_2d.find_smallest_header()
@@ -151,11 +151,12 @@ def search(dll_2d, solution, k):
         while j is not r:
             dll_2d.cover_column(j)
             j = j.right
-        solution = search(dll_2d, solution, k+1)
+        solution = search(dll_2d, solution, array_dimensions, k+1)
         # Lines below added in for early termination
         # - - -
-        if dll_2d.main_header.right is dll_2d.main_header:
-            return solution
+        # # if dll_2d.main_header.right is dll_2d.main_header:
+        # #     return solution
+        display(array_dimensions, solution)
         # - - -
         c = r.header
         r = o_k
@@ -180,25 +181,26 @@ def generate_starting_matrix(num_elements, polyomino_size):
     return np.asarray(result)
 
 
-def display(array, solution):
+def display(array_dimensions, solution):
+    plt.close()
     fig = plt.figure()
     ax = fig.gca()
-    ax.set_xticks(np.arange(start=0, stop=array[0]+1, step=1))
-    ax.set_yticks(np.arange(start=0, stop=array[1]+1, step=1))
+    ax.set_xticks(np.arange(start=0, stop=array_dimensions[0]+1, step=1))
+    ax.set_yticks(np.arange(start=0, stop=array_dimensions[1]+1, step=1))
     plt.grid(True)
     colours = ["black", "blue", "orange", "green", "red"]
     for r, row in enumerate(solution):
         color = colours[np.mod(r, len(colours))]
         for e, element in enumerate(row):
             if element == 1:
-                x, y = np.divmod(e, array[0])
+                x, y = np.divmod(e, array_dimensions[0])
                 plt.fill_between([x, x+1], y, y-1, color=color)
-    plt.show()
+    plt.pause(1)
 
 def main():
-    array_dimensions = (10, 12)
+    array_dimensions = (4, 4)
     array = np.zeros(array_dimensions, dtype=int)
-    polyomino_size = 10
+    polyomino_size = 4
     assert np.mod(array.size, polyomino_size) == 0
     print(f"Creating solution matrix for:\n    Array: {array.shape}\n    Polyomino: {polyomino_size}")
     solution_matrix = generate_starting_matrix(array.size, polyomino_size)
@@ -206,7 +208,7 @@ def main():
     dll_2d = DLL_2D(solution_matrix)
     print("Solving...")
     solution = []
-    solution = search(dll_2d, solution, k=0)
+    solution = search(dll_2d, solution, array_dimensions, k=0)
     print(f"Solution: {solution}")
     display(array_dimensions, solution)
 

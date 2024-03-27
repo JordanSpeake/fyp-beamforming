@@ -42,6 +42,10 @@ def parse_antenna_config(data):
             return antennas.Circular(
                 data["frequency"], data["radius"], data["num_elements"]
             )
+        elif data["type"] == "RectangularPlanar":
+            return antennas.RectangularPlanar(
+                data["frequency"], data["spacing"], data["num_elements"]
+            )
     except KeyError as e:
         print(f"Failed to parse antenna config: {e}")
         return None
@@ -78,7 +82,7 @@ def parse_logging_config(data):
             debug=data["debug"],
         )
     except KeyError as e:
-        print("Failed to parse logging config: {e}")
+        print(f"Failed to parse logging config: {e}")
         return None
     return logging
 
