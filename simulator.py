@@ -11,11 +11,11 @@ except ImportError:
 def parse_config(path_to_config):
     with open(path_to_config, "rb") as file:
         data = tomlib.load(file)
-        antenna = parse_antenna_config(data["antenna"])
-        if antenna is None:
-            return None
         parameters = parse_parameters_config(data["parameters"])
         if parameters is None:
+            return None
+        antenna = parse_antenna_config(data["antenna"], parameters)
+        if antenna is None:
             return None
         logging = parse_logging_config(data["logging"])
         if logging is None:
@@ -32,19 +32,28 @@ def parse_config(path_to_config):
         }
 
 
-def parse_antenna_config(data):
+def parse_antenna_config(data, parameters_config):
     try:
         if data["type"] == "UniformLinear":
             return antennas.UniformLinear(
-                data["frequency"], data["spacing"], data["num_elements"]
+                data["frequency"],
+                data["spacing"],
+                data["num_elements"],
+                parameters_config,
             )
         elif data["type"] == "Circular":
             return antennas.Circular(
-                data["frequency"], data["radius"], data["num_elements"]
+                data["frequency"],
+                data["radius"],
+                data["num_elements"],
+                parameters_config,
             )
         elif data["type"] == "RectangularPlanar":
             return antennas.RectangularPlanar(
-                data["frequency"], data["spacing"], data["num_elements"]
+                data["frequency"],
+                data["spacing"],
+                data["num_elements"],
+                parameters_config,
             )
     except KeyError as e:
         print(f"Failed to parse antenna config: {e}")
@@ -119,10 +128,10 @@ def main():
     config = get_config(arguments)
     if config is None:
         return
-    antenna = config["antenna"]
+    config_name = config["config_name"]
     parameters = config["parameters"]
     logging = config["logging"]
-    config_name = config["config_name"]
+    antenna = config["antenna"]
     if not logging.debug:
         output_path = get_output_path(config["config_name"])
         with open(output_path, "w", newline="", encoding="utf-8") as file:

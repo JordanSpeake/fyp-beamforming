@@ -137,7 +137,6 @@ def particle_swarm_optimisation(antenna, parameters, logging):
         if logging.show_plots:
             antenna.display(
                 population.global_best_position,
-                parameters,
                 persist=logging.plots_persist,
             )
     return result
@@ -146,7 +145,7 @@ def particle_swarm_optimisation(antenna, parameters, logging):
 def beamformer(antenna, parameters, logging, config_name):
     if logging.debug:
         debug_particle = Particle(antenna, parameters, uniform=True)
-        antenna.display(debug_particle.position, parameters, persist=True)
+        antenna.display(debug_particle.position, persist=True)
         return None
     else:
         if logging.verbose:
@@ -157,7 +156,6 @@ def beamformer(antenna, parameters, logging, config_name):
         if logging.show_plots:
             antenna.display(
                 result[-1]["best_position_history"],
-                parameters,
                 persist=logging.plots_persist,
             )
         return result
