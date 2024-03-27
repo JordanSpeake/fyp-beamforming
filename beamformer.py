@@ -137,7 +137,6 @@ def particle_swarm_optimisation(antenna, parameters, logging):
         if logging.show_plots:
             antenna.display(
                 population.global_best_position,
-                persist=logging.plots_persist,
             )
     return result
 

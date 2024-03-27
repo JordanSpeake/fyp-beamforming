@@ -17,7 +17,7 @@ class Antenna:
         self.axes = self.figure.add_subplot(projection="3d")
         self.num_elements = num_elements
 
-    def display(self, element_complex_weights, persist):
+    def display(self, element_complex_weights, persist=False):
         array_factor = self.array_factor(element_complex_weights)
         R, P = np.meshgrid(self.phi_samples, self.theta_samples)
         X, Y = R * np.cos(P), R * np.sin(P)
