@@ -5,6 +5,7 @@ import itertools
 """An implementation of Donald Knuth's Dancing Links Algorithm X"""
 """https://arxiv.org/pdf/cs/0011047.pdf"""
 
+
 class Data:
     def __init__(self, up, down, header, left=None, right=None):
         self.left = left
@@ -12,6 +13,7 @@ class Data:
         self.up = up
         self.down = down
         self.header = header
+
 
 class ColumnHeader(Data):
     def __init__(self, left, right, size, name):
@@ -23,11 +25,13 @@ class ColumnHeader(Data):
         self.size = size
         self.name = name
 
+
 class MainHeader:
     def __init__(self):
         self.left = self
         self.right = self
         self.name = None
+
 
 class DLL_2D:
     def __init__(self, solution_matrix):
@@ -36,7 +40,12 @@ class DLL_2D:
         # Insert all column headers
         for c, column in enumerate(solution_matrix.T):
             ones_in_column = np.sum(column)
-            header = ColumnHeader(left=self.main_header.left, right=self.main_header, size=ones_in_column, name=c)
+            header = ColumnHeader(
+                left=self.main_header.left,
+                right=self.main_header,
+                size=ones_in_column,
+                name=c,
+            )
             self.main_header.left.right = header
             self.main_header.left = header
         # For each row:
@@ -50,8 +59,8 @@ class DLL_2D:
                     data_points.append(Data(up=self, down=self, header=None))
             # Connect the points up horizontally and vertically
             for i, data in enumerate(data_points):
-                data.left = data_points[i-1]
-                data.right = data_points[np.mod(i+1, len(data_points))]
+                data.left = data_points[i - 1]
+                data.right = data_points[np.mod(i + 1, len(data_points))]
                 header = self.find_header(column_indices[i])
                 data.header = header
                 data.up = header.up
@@ -105,7 +114,6 @@ class DLL_2D:
         out[indices] = 1
         return out
 
-
     def cover_column(self, column):
         header = column.header
         header.right.left = header.left
@@ -151,7 +159,7 @@ def search(dll_2d, solution, array_dimensions, k):
         while j is not r:
             dll_2d.cover_column(j)
             j = j.right
-        solution = search(dll_2d, solution, array_dimensions, k+1)
+        solution = search(dll_2d, solution, array_dimensions, k + 1)
         # Lines below added in for early termination
         # - - -
         # # if dll_2d.main_header.right is dll_2d.main_header:
@@ -185,8 +193,8 @@ def display(array_dimensions, solution):
     plt.close()
     fig = plt.figure()
     ax = fig.gca()
-    ax.set_xticks(np.arange(start=0, stop=array_dimensions[0]+1, step=1))
-    ax.set_yticks(np.arange(start=0, stop=array_dimensions[1]+1, step=1))
+    ax.set_xticks(np.arange(start=0, stop=array_dimensions[0] + 1, step=1))
+    ax.set_yticks(np.arange(start=0, stop=array_dimensions[1] + 1, step=1))
     plt.grid(True)
     colours = ["black", "blue", "orange", "green", "red"]
     for r, row in enumerate(solution):
@@ -194,15 +202,18 @@ def display(array_dimensions, solution):
         for e, element in enumerate(row):
             if element == 1:
                 x, y = np.divmod(e, array_dimensions[0])
-                plt.fill_between([x, x+1], y, y-1, color=color)
+                plt.fill_between([x, x + 1], y, y - 1, color=color)
     plt.pause(1)
+
 
 def main():
     array_dimensions = (4, 4)
     array = np.zeros(array_dimensions, dtype=int)
     polyomino_size = 4
     assert np.mod(array.size, polyomino_size) == 0
-    print(f"Creating solution matrix for:\n    Array: {array.shape}\n    Polyomino: {polyomino_size}")
+    print(
+        f"Creating solution matrix for:\n    Array: {array.shape}\n    Polyomino: {polyomino_size}"
+    )
     solution_matrix = generate_starting_matrix(array.size, polyomino_size)
     print("Generating initial 2D doubly linked list")
     dll_2d = DLL_2D(solution_matrix)

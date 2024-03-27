@@ -27,7 +27,7 @@ class Parameters:
         self.population_size = population_size
         self.samples = samples  # the number of samples taken when calculating the array factor in each direction
         self.theta = np.linspace(-np.pi / 2, np.pi / 2, samples)
-        self.phi = np.linspace(-np.pi /2, np.pi/2, samples)
+        self.phi = np.linspace(-np.pi / 2, np.pi / 2, samples)
         self.cognitive_coeff = cognitive_coeff
         self.social_coeff = social_coeff
         self.intertia_weight = intertia_weight

@@ -22,7 +22,6 @@ class UniformLinear:
         self.figure = plt.figure()
         self.axes = self.figure.add_subplot(projection="3d")
 
-
     def fitness(self, element_complex_weights, parameters):
         """Calculate the fitness of a given set of antenna element weights and phases
         Takes a particle's position as the antenna's complex weights"""
@@ -39,10 +38,12 @@ class UniformLinear:
         weights = np.abs(element_complex_weights)
         theta = np.tile(np.atleast_2d(parameters.theta), (parameters.samples, 1))
         phi = np.tile(np.atleast_2d(parameters.phi).T, (1, parameters.samples))
-        sin_u = np.sin(theta)*np.cos(phi)
+        sin_u = np.sin(theta) * np.cos(phi)
         array_factor = np.zeros((parameters.samples, parameters.samples), dtype=complex)
         for m in range(self.num_elements):
-            exponent = phases[m] + (self.wavenumber * m * self.spacing * np.sin(theta)*np.cos(phi))
+            exponent = phases[m] + (
+                self.wavenumber * m * self.spacing * np.sin(theta) * np.cos(phi)
+            )
             array_factor += weights[m] * np.exp(1j * exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
@@ -85,7 +86,8 @@ class Circular:
         for k in range(self.num_elements):
             sin_thetas = np.atleast_2d(np.sin(parameters.theta))
             cos_phi_deltas = np.atleast_2d(
-                np.cos(parameters.phi - self.element_angles[k])).T
+                np.cos(parameters.phi - self.element_angles[k])
+            ).T
             sin_cos_product = np.matmul(cos_phi_deltas, sin_thetas)
             exponent = phases[k] - self.wavenumber * self.radius * sin_cos_product
             array_factor += weights[k] * np.exp(1j * exponent)
@@ -145,14 +147,18 @@ class RectangularPlanar:
 
         theta = np.tile(np.atleast_2d(parameters.theta), (parameters.samples, 1))
         phi = np.tile(np.atleast_2d(parameters.phi).T, (1, parameters.samples))
-        sin_u = np.sin(theta)*np.cos(phi)
-        sin_v = np.sin(theta)*np.sin(phi)
+        sin_u = np.sin(theta) * np.cos(phi)
+        sin_v = np.sin(theta) * np.sin(phi)
         array_factor = np.zeros((parameters.samples, parameters.samples), dtype=complex)
         for m in range(self.num_elements_x):
             for n in range(self.num_elements_y):
                 phase = phases[m][n]
                 weight = weights[m][n]
-                exponent = self.wavenumber * (m*self.spacing_x*sin_u + n*self.spacing_y*sin_v) + phase
+                exponent = (
+                    self.wavenumber
+                    * (m * self.spacing_x * sin_u + n * self.spacing_y * sin_v)
+                    + phase
+                )
                 array_factor += weight * np.exp(1j * exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
