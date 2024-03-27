@@ -28,15 +28,16 @@ class Antenna:
             plt.pause(0.05)
 
     def fitness(self, element_complex_weights, parameters):
-        array_factor = self.array_factor(element_complex_weights)
         score = 0
         for target in parameters.targets:
-            score += array_factor[target[0]][target[1]]
+            score += self.array_factor_single(element_complex_weights, target[0], target[1])
         return score
 
+    def array_factor_single(self, element_complex_weights, theta, phi):
+        assert False, "array_factor_single() must be defined in child class."
+
     def array_factor(self, element_complex_weights):
-        # Is this good practice?
-        assert False, "array_factor must be defined in a child class."
+        assert False, "array_factor() must be defined in child class."
 
 
 class RectangularPlanar(Antenna):
@@ -72,9 +73,23 @@ class UniformLinear(Antenna):
         weights = np.abs(element_complex_weights)
         array_factor = np.zeros_like(self.theta, dtype=complex)
         for element in range(self.num_elements):
-            exponent = phases[element] + 1j * self.wavenumber * (
-                element * self.spacing * self.sin_u
-            )
+            exponent = phases[element] + (
+                1j * self.wavenumber * (
+                    element * self.spacing * self.sin_u
+            ))
+            array_factor += weights[element] * np.exp(exponent)
+        array_factor = 20 * np.log10(np.abs(array_factor))
+        return array_factor
+
+    def array_factor_single(self, element_complex_weights, theta, phi):
+        phases = np.angle(element_complex_weights)
+        weights = np.abs(element_complex_weights)
+        array_factor = 0 + 0j
+        for element in range(self.num_elements):
+            exponent = phases[element] + (
+                1j * self.wavenumber * (
+                    element * self.spacing * np.sin(theta) * np.cos(phi)
+            ))
             array_factor += weights[element] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
