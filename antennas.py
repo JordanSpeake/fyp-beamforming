@@ -25,7 +25,7 @@ class Antenna:
         if persist:
             plt.show()
         else:
-            plt.pause(0.05)
+            plt.pause(0.01)
 
     def fitness(self, element_complex_weights, parameters):
         score = 0
