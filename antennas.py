@@ -30,7 +30,9 @@ class Antenna:
     def fitness(self, element_complex_weights, parameters):
         score = 0
         for target in parameters.targets:
-            score += self.array_factor_single(element_complex_weights, target[0], target[1])
+            score += self.array_factor_single(
+                element_complex_weights, target[0], target[1]
+            )
         return score
 
     def array_factor_single(self, element_complex_weights, theta, phi):
@@ -62,6 +64,22 @@ class RectangularPlanar(Antenna):
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
+    def array_factor_single(self, element_complex_weights, theta, phi):
+        phases = np.angle(element_complex_weights)
+        weights = np.abs(element_complex_weights)
+        array_factor = 0 + 0j
+        sin_u = np.sin(theta) * np.cos(phi)
+        sin_v = np.sin(theta) * np.sin(phi)
+        for m in range(self.num_el_x):
+            for n in range(self.num_el_y):
+                element = m * self.num_el_y + n
+                exponent = phases[element] + 1j * self.wavenumber * (
+                    m * self.spacing[0] * sin_u + n * self.spacing[1] * sin_v
+                )
+                array_factor += weights[element] * np.exp(exponent)
+        array_factor = 20 * np.log10(np.abs(array_factor))
+        return array_factor
+
 
 class UniformLinear(Antenna):
     def __init__(self, frequency: float, spacing: float, num_el: int, parameters):
@@ -74,9 +92,8 @@ class UniformLinear(Antenna):
         array_factor = np.zeros_like(self.theta, dtype=complex)
         for element in range(self.num_elements):
             exponent = phases[element] + (
-                1j * self.wavenumber * (
-                    element * self.spacing * self.sin_u
-            ))
+                1j * self.wavenumber * (element * self.spacing * self.sin_u)
+            )
             array_factor += weights[element] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
@@ -85,11 +102,11 @@ class UniformLinear(Antenna):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
         array_factor = 0 + 0j
+        exponent_constant = self.spacing * np.sin(theta) * np.cos(phi)
         for element in range(self.num_elements):
             exponent = phases[element] + (
-                1j * self.wavenumber * (
-                    element * self.spacing * np.sin(theta) * np.cos(phi)
-            ))
+                1j * self.wavenumber * (element * exponent_constant)
+            )
             array_factor += weights[element] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
@@ -112,6 +129,22 @@ class Circular(Antenna):
                     np.sin(element_angle) * self.sin_u
                     + np.cos(element_angle) * self.sin_v
                 )
+            )
+            array_factor += weights[k] * np.exp(exponent)
+        array_factor = 20 * np.log10(np.abs(array_factor))
+        return array_factor
+
+    def array_factor_single(self, element_complex_weights, theta, phi):
+        phases = np.angle(element_complex_weights)
+        weights = np.abs(element_complex_weights)
+        sin_u = np.sin(theta) * np.cos(phi)
+        sin_v = np.sin(theta) * np.sin(phi)
+        array_factor = 0 + 0j
+        for k in range(self.num_elements):
+            element_angle = 2 * np.pi * k / self.num_elements
+            exponent = phases[k] + 1j * self.wavenumber * (
+                self.radius
+                * (np.sin(element_angle) * sin_u + np.cos(element_angle) * sin_v)
             )
             array_factor += weights[k] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
