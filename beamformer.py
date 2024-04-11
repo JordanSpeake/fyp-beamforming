@@ -22,7 +22,7 @@ class Particle:
         self.tiled_position = self.position # set by generate_tiling() on the first step.
         self.tile_labels = np.zeros(self.clusters, dtype=int)
         self.tile_values = np.zeros(self.clusters, dtype=complex)
-        self.score = antenna.fitness(self.position, parameters)
+        self.score = antenna.fitness(self.tiled_position, parameters)
         self.best_score = self.score
         self.best_known_score = self.score
         self.dimensions = antenna.num_elements
@@ -33,14 +33,14 @@ class Particle:
 
 
     def generate_tiling(self):
-        # TODO speedup, maybe use map() instead
+        """Uses k means clustering to update tiled_position, based on phase and amplitude"""
         separated_position = np.zeros((self.dimensions, 2))
         separated_position[:, 0] = np.abs(self.position)
         separated_position[:, 1] = np.angle(self.position)
         kmeans = KMeans(n_clusters=self.clusters).fit(separated_position)
         self.tile_labels = kmeans.labels_
         centres = kmeans.cluster_centers_
-        self.tile_values = centre[0] * np.exp(1j*centre[1])
+        self.tile_values = centres[:, 0] * np.exp(1j*centres[:, 1])
         for index, label in enumerate(self.tile_labels):
             self.tiled_position[index] = self.tile_values[label]
 
@@ -53,14 +53,14 @@ class Particle:
         self.update_score(fitness_function)
 
     def update_score(self, fitness_function):
-        """Update the particle's score with a provided fitness function provided
+        """Update the particle's score with the provided fitness function
         Called by step()"""
-        self.score = fitness_function(self.position)
+        self.score = fitness_function(self.tiled_position)
         if self.score > self.best_score:
-            self.best_position = self.position
+            self.best_position = self.tiled_position
             self.best_score = self.score
         if self.score > self.best_known_score:
-            self.best_known_position = self.position
+            self.best_known_position = self.tiled_position
             self.best_known_score = self.score
 
     def update_position(self):
@@ -106,6 +106,7 @@ class Population:
         self.neighbourhood_size = parameters.neighbourhood_size
         self.global_best_position = self.population[0].position
         self.global_best_score = self.population[0].score
+        self.global_best_tiled_position = self.population[0].tiled_position
         self.fitness_function = lambda p: antenna.fitness(p, parameters)
 
     def step(self):
@@ -145,6 +146,7 @@ def particle_swarm_optimisation(antenna, parameters, logging):
         result.append(
             {
                 "best_position_history": population.global_best_position,
+                "best_tiled_position_history" : population.global_best_tiled_position,
                 "best_score_history": population.global_best_score,
             }
         )
