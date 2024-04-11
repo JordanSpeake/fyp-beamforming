@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
-
+from sklearn.cluster import KMeans
 
 class Particle:
     def __init__(self, antenna, parameters, uniform=False):
@@ -18,6 +18,10 @@ class Particle:
             )
         self.best_position = self.position
         self.best_known_position = self.position
+        self.clusters = parameters.num_tiles
+        self.tiled_position = self.position # set by generate_tiling() on the first step.
+        self.tile_labels = np.zeros(self.clusters, dtype=int)
+        self.tile_values = np.zeros(self.clusters, dtype=complex)
         self.score = antenna.fitness(self.position, parameters)
         self.best_score = self.score
         self.best_known_score = self.score
@@ -27,10 +31,25 @@ class Particle:
         self.cognitive_coeff = parameters.cognitive_coeff
         self.social_coeff = parameters.social_coeff
 
+
+    def generate_tiling(self):
+        # TODO speedup, maybe use map() instead
+        separated_position = np.zeros((self.dimensions, 2))
+        separated_position[:, 0] = np.abs(self.position)
+        separated_position[:, 1] = np.angle(self.position)
+        kmeans = KMeans(n_clusters=self.clusters).fit(separated_position)
+        self.tile_labels = kmeans.labels_
+        centres = kmeans.cluster_centers_
+        self.tile_values = centre[0] * np.exp(1j*centre[1])
+        for index, label in enumerate(self.tile_labels):
+            self.tiled_position[index] = self.tile_values[label]
+
+
     def step(self, fitness_function):
         """Move the particle to the next position, then update it's score based on the provided fitness function"""
         self.update_velocity()
         self.update_position()
+        self.generate_tiling()
         self.update_score(fitness_function)
 
     def update_score(self, fitness_function):

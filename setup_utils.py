@@ -23,6 +23,7 @@ class Parameters:
         beamwidth,
         max_particle_velocity,
         neighbourhood_size,
+        num_tiles,
     ):
         self.population_size = population_size
         self.samples = samples  # the number of samples taken when calculating the array factor in each direction
@@ -39,3 +40,4 @@ class Parameters:
         self.beamwidth_samples = np.asarray(beamwidth * samples / np.pi, dtype=int)
         self.max_particle_velocity = max_particle_velocity
         self.neighbourhood_size = neighbourhood_size
+        self.num_tiles = num_tiles
