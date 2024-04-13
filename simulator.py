@@ -72,7 +72,6 @@ def parse_parameters_config(data):
             intertia_weight=data["inertia_weight"],
             max_steps=data["max_steps"],
             static_targets=data["static_targets"],
-            beamwidth=data["beamwidth"],
             max_particle_velocity=data["max_particle_velocity"],
             neighbourhood_size=data["neighbourhood_size"],
             num_tiles=data["num_tiles"],

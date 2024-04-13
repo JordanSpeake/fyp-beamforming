@@ -20,7 +20,6 @@ class Parameters:
         intertia_weight,
         max_steps,
         static_targets,
-        beamwidth,
         max_particle_velocity,
         neighbourhood_size,
         num_tiles,
@@ -36,8 +35,6 @@ class Parameters:
         self.targets = (
             ((np.asarray(static_targets, dtype=float) / (np.pi)) + 0.5) * samples - 1
         ).astype(int)
-        self.beamwidth = beamwidth
-        self.beamwidth_samples = np.asarray(beamwidth * samples / np.pi, dtype=int)
         self.max_particle_velocity = max_particle_velocity
         self.neighbourhood_size = neighbourhood_size
         self.num_tiles = num_tiles
