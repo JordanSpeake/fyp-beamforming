@@ -110,7 +110,6 @@ class RectangularPlanar(Antenna):
         self.ax_tile_pattern.set_yticks(np.arange(start=0, stop=self.num_el_y + 1, step=1))
         self.ax_tile_pattern.grid(True)
         colors = ["red", "green", "blue", "cyan", "magenta", "yellow", "orange", "purple"]
-        print(tile_labels)
         element_count = self.num_el_x * self.num_el_y
         for element in range(element_count):
             tile_group = tile_labels[element]
@@ -146,6 +145,16 @@ class UniformLinear(Antenna):
             array_factor += weights[element] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
+
+    def update_tiling_plot(self, tile_labels):
+        self.ax_tile_pattern.clear()
+        self.ax_tile_pattern.set_xticks(np.arange(start=0, stop=self.num_elements + 1, step=1))
+        self.ax_tile_pattern.grid(True)
+        colors = ["red", "green", "blue", "cyan", "magenta", "yellow", "orange", "purple"]
+        for element in range(self.num_elements):
+            tile_group = tile_labels[element]
+            x, y = np.divmod(element, self.num_elements)
+            self.ax_tile_pattern.fill_between([x, x + 1], y, y - 1, color=colors[tile_group])
 
 
 class Circular(Antenna):
