@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+import matplotlib.colors as mcolors
 
 class Antenna:
     def __init__(self, frequency, num_elements, parameters):
@@ -14,23 +14,27 @@ class Antenna:
         self.sin_u = np.sin(self.theta) * np.cos(self.phi)
         self.sin_v = np.sin(self.theta) * np.sin(self.phi)
         self.num_elements = num_elements
-        self.figure, (self.ax_untiled, self.ax_tiled) = plt.subplots(
-            1, 2, subplot_kw={"projection": "3d"}
-        )
+        self.figure = plt.figure()
+        self.ax_untiled = plt.subplot(131, projection="3d")
+        self.ax_tiled = plt.subplot(132, projection="3d")
+        self.ax_tile_pattern = plt.subplot(133)
 
     def reset_axes(self):
-        self.ax_untiled.clear()
-        self.ax_tiled.clear()
         self.ax_tiled.set_title("ORIGINAL: Array Factor")
         self.ax_tiled.set_xlabel("Angle (Theta)")
         self.ax_tiled.set_ylabel("Angle (Phi)")
+        self.ax_tiled.clear()
         self.ax_tiled.set_zlabel("Array Factor (dB)")
         self.ax_untiled.set_title("TILED: Array Factor")
         self.ax_untiled.set_xlabel("Angle (Theta)")
         self.ax_untiled.set_ylabel("Angle (Phi)")
         self.ax_untiled.set_zlabel("Array Factor (dB)")
+        self.ax_untiled.clear()
 
-    def display(self, untiled_weights, tiled_weights, persist=False, pause_time=0.01):
+    def update_tiling_plot(self, tile_labels):
+        assert False, "update_tiling_plot() must be defined in child class."
+
+    def display(self, untiled_weights, tiled_weights, tile_labels, persist=False, pause_time=0.01):
         untiled_af = self.array_factor(untiled_weights)
         tiled_af = self.array_factor(tiled_weights)
         R, P = np.meshgrid(self.phi_samples, self.theta_samples)
@@ -39,10 +43,12 @@ class Antenna:
         self.reset_axes()
         self.ax_untiled.plot_surface(X, Y, untiled_af, cmap=plt.cm.YlGnBu_r)
         self.ax_tiled.plot_surface(X, Y, tiled_af, cmap=plt.cm.YlGnBu_r)
+        self.update_tiling_plot(tile_labels)
         if persist:
             plt.show()
         else:
             plt.pause(pause_time)
+
 
     def fitness(self, element_complex_weights, parameters):
         # TODO replace with LMS
@@ -98,6 +104,18 @@ class RectangularPlanar(Antenna):
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
+    def update_tiling_plot(self, tile_labels):
+        self.ax_tile_pattern.clear()
+        self.ax_tile_pattern.set_xticks(np.arange(start=0, stop=self.num_el_x + 1, step=1))
+        self.ax_tile_pattern.set_yticks(np.arange(start=0, stop=self.num_el_y + 1, step=1))
+        self.ax_tile_pattern.grid(True)
+        colors = ["red", "green", "blue", "cyan", "magenta", "yellow", "orange", "purple"]
+        print(tile_labels)
+        element_count = self.num_el_x * self.num_el_y
+        for element in range(element_count):
+            tile_group = tile_labels[element]
+            x, y = np.divmod(element, self.num_el_x)
+            self.ax_tile_pattern.fill_between([x, x + 1], y, y - 1, color=colors[tile_group])
 
 class UniformLinear(Antenna):
     def __init__(self, frequency: float, spacing: float, num_el: int, parameters):

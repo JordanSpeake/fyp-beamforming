@@ -19,11 +19,9 @@ class Particle:
             )
         self.best_position = self.position
         self.best_known_position = self.position
+        self.tiled_position = (np.zeros_like(self.position))
         self.clusters = parameters.num_tiles
-        self.tiled_position = (
-            self.position
-        )  # set by generate_tiling() on the first step.
-        self.tile_labels = np.zeros(self.clusters, dtype=int)
+        self.tile_labels = np.zeros_like(self.position, dtype=int)
         self.tile_values = np.zeros(self.clusters, dtype=complex)
         self.score = antenna.fitness(self.tiled_position, parameters)
         self.best_score = self.score
@@ -73,7 +71,7 @@ class Particle:
         self.position = weights * np.exp(1j * phases)
 
     def random_complex(self, size):
-        """Generates a random complex number, sampled from a zero-centred disk"""
+        """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
         return np.sqrt(np.random.uniform(0, 1, size)) * np.exp(
             1.0j * np.random.uniform(0, 2 * np.pi, size)
         )
@@ -102,7 +100,7 @@ class Particle:
     def set_best_known(self, new_best_known):
         """Update the particle with a best_known position, distinct from the particle's own best position"""
         # TODO - should this check if the new_best_known is actually better?
-        self.best_known_position = new_best_known.position
+        self.best_known_position = new_best_known.tiled_position
         self.best_known_score = new_best_known.score
 
 
@@ -115,6 +113,7 @@ class Population:
         self.global_best_position = self.population[0].position
         self.global_best_score = self.population[0].score
         self.global_best_tiled_position = self.population[0].tiled_position
+        self.global_best_tile_labels = self.population[0].tile_labels
         self.fitness_function = lambda p: antenna.fitness(p, parameters)
 
     def step(self):
@@ -128,7 +127,9 @@ class Population:
             particle.step(self.fitness_function)
             if particle.score > self.global_best_score:
                 self.global_best_position = particle.position
+                self.global_best_tiled_position = particle.tiled_position
                 self.global_best_score = particle.score
+                self.global_best_tile_labels = particle.tile_labels
 
     def best_particle_in_neighbourhood(self, index):
         """Find the best scoring particle in the neighbourhood (by particle index) of a given particle"""
@@ -155,6 +156,7 @@ def particle_swarm_optimisation(antenna, parameters, logging):
             {
                 "best_position_history": population.global_best_position,
                 "best_tiled_position_history": population.global_best_tiled_position,
+                "best_tile_labels_history": population.global_best_tile_labels,
                 "best_score_history": population.global_best_score,
             }
         )
@@ -165,7 +167,7 @@ def particle_swarm_optimisation(antenna, parameters, logging):
             )
         if logging.show_plots:
             antenna.display(
-                population.global_best_position, population.global_best_tiled_position
+                population.global_best_position, population.global_best_tiled_position, population.global_best_tile_labels
             )
     return result
 
