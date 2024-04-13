@@ -13,21 +13,32 @@ class Antenna:
         self.phi_samples = parameters.phi
         self.sin_u = np.sin(self.theta) * np.cos(self.phi)
         self.sin_v = np.sin(self.theta) * np.sin(self.phi)
-        self.figure = plt.figure()
-        self.axes = self.figure.add_subplot(projection="3d")
         self.num_elements = num_elements
+        self.figure, (self.ax_untiled, self.ax_tiled) = plt.subplots(1, 2, subplot_kw={'projection': "3d"})
+        self.setup_figures()
 
-    def display(self, element_complex_weights, persist=False):
-        array_factor = self.array_factor(element_complex_weights)
+    def setup_figures(self):
+        self.ax_tiled.set_title("ORIGINAL: Array Factor")
+        self.ax_tiled.set_xlabel("Angle")
+        self.ax_tiled.set_ylabel("Array Factor (dB)")
+        self.ax_untiled.set_title("TILED: Array Factor")
+        self.ax_untiled.set_xlabel("Angle")
+        self.ax_untiled.set_ylabel("Array Factor (dB)")
+
+    def display(self, untiled_weights, tiled_weights, persist=False, pause_time=0.01):
+        untiled_af = self.array_factor(untiled_weights)
+        tiled_af = self.array_factor(tiled_weights)
         R, P = np.meshgrid(self.phi_samples, self.theta_samples)
         X, Y = R * np.cos(P), R * np.sin(P)
-        self.axes.plot_surface(X, Y, array_factor, cmap=plt.cm.YlGnBu_r)
+        self.ax_untiled.plot_surface(X, Y, untiled_af, cmap=plt.cm.YlGnBu_r)
+        self.ax_tiled.plot_surface(X, Y, tiled_af, cmap=plt.cm.YlGnBu_r)
         if persist:
             plt.show()
         else:
-            plt.pause(0.01)
+            plt.pause(pause_time)
 
     def fitness(self, element_complex_weights, parameters):
+        #TODO replace with LMS
         score = 0
         for target in parameters.targets:
             score += self.array_factor_single(
