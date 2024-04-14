@@ -17,6 +17,7 @@ class Particle:
             self.position = np.random.uniform(size=antenna.num_elements) * np.exp(
                 1j * np.random.uniform(size=antenna.num_elements) * 2 * np.pi
             )
+        self.phase_bit_depth = parameters.phase_bit_depth
         self.best_position = self.position
         self.best_known_position = self.position
         self.tiled_position = (np.zeros_like(self.position))
@@ -68,7 +69,16 @@ class Particle:
         position = np.add(self.position, self.velocity)
         weights = np.clip(np.abs(position), 0, 1)
         phases = np.mod(np.angle(position), 2 * np.pi)
+        for index, phase in enumerate(phases):
+            phases[index] = self.quantize_phase(phase)
         self.position = weights * np.exp(1j * phases)
+
+    def quantize_phase(self, phase):
+        # TODO - Implement Numba on this function
+        quantisation_step = int((phase/2*np.pi) * np.power(2, self.phase_bit_depth))
+        phase = quantisation_step * 255 * 2 * np.pi
+        return phase
+
 
     def random_complex(self, size):
         """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""

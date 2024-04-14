@@ -75,6 +75,7 @@ def parse_parameters_config(data):
             max_particle_velocity=data["max_particle_velocity"],
             neighbourhood_size=data["neighbourhood_size"],
             num_tiles=data["num_tiles"],
+            phase_bit_depth=data["phase_bit_depth"],
         )
     except KeyError as e:
         print(f"Failed to parse parameters config: {e}")

@@ -23,6 +23,7 @@ class Parameters:
         max_particle_velocity,
         neighbourhood_size,
         num_tiles,
+        phase_bit_depth,
     ):
         self.population_size = population_size
         self.samples = samples  # the number of samples taken when calculating the array factor in each direction
@@ -38,3 +39,4 @@ class Parameters:
         self.max_particle_velocity = max_particle_velocity
         self.neighbourhood_size = neighbourhood_size
         self.num_tiles = num_tiles
+        self.phase_bit_depth = phase_bit_depth
