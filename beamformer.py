@@ -11,8 +11,8 @@ class Particle:
             )
             self.position = np.ones(antenna.num_elements, dtype=complex)
         else:
-            self.velocity = random_complex(antenna.num_elements, size)
-            self.position = random_complex(antenna.num_elements, size)
+            self.velocity = self.random_complex(antenna.num_elements)
+            self.position = self.random_complex(antenna.num_elements)
         self.phase_bit_depth = parameters.phase_bit_depth
         self.best_position = self.position
         self.best_known_position = self.position
