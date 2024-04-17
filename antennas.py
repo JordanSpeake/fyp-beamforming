@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
-
+import matplotlib.gridspec as gridspec
 
 class Antenna:
     """Base class for all antennas"""
@@ -19,22 +19,23 @@ class Antenna:
         self.sin_u = np.sin(self.theta) * np.cos(self.phi)
         self.sin_v = np.sin(self.theta) * np.sin(self.phi)
         self.figure = plt.figure()
-        self.ax_untiled = plt.subplot(131, projection="3d")
-        self.ax_tiled = plt.subplot(132, projection="3d")
-        self.ax_tile_pattern = plt.subplot(133)
+        grid_spec = gridspec.GridSpec(2, 2)
+        self.ax_tile_pattern = self.figure.add_subplot(grid_spec[:, 1])
+        self.ax_untiled = self.figure.add_subplot(grid_spec[0, 0], projection="3d")
+        self.ax_tiled = self.figure.add_subplot(grid_spec[1, 0], projection="3d")
 
     def reset_axes(self):
         """Reset and clear axes for the next step's data output to be plotted"""
+        self.ax_tiled.clear()
         self.ax_tiled.set_title("ORIGINAL: Array Factor")
         self.ax_tiled.set_xlabel("Angle (Theta)")
         self.ax_tiled.set_ylabel("Angle (Phi)")
-        self.ax_tiled.clear()
         self.ax_tiled.set_zlabel("Array Factor (dB)")
+        self.ax_untiled.clear()
         self.ax_untiled.set_title("TILED: Array Factor")
         self.ax_untiled.set_xlabel("Angle (Theta)")
         self.ax_untiled.set_ylabel("Angle (Phi)")
         self.ax_untiled.set_zlabel("Array Factor (dB)")
-        self.ax_untiled.clear()
 
     def display(
         self,
