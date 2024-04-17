@@ -148,49 +148,53 @@ class Population:
                 best_particle_index = i
         return best_particle_index
 
+class PSO:
+    def __init__(self, antenna, parameters, logging):
+        self.antenna = antenna
+        self.parameters = parameters
+        self.logging = logging
+        self.population = Population(self.antenna, self.parameters, uniform=self.logging.use_uniform_particle)
+        self.result = []
 
-def particle_swarm_optimisation(antenna, parameters, logging):
-    population = Population(antenna, parameters)
-    result = []
-    for step_counter in range(parameters.max_steps):
-        population.step()
-        result.append(
-            {
-                "best_position_history": population.global_best_position,
-                "best_tiled_position_history": population.global_best_tiled_position,
-                "best_tile_labels_history": population.global_best_tile_labels,
-                "best_score_history": population.global_best_score,
-            }
-        )
-        if logging.verbose:
-            print(f"Step: {step_counter}/{parameters.max_steps-1}")
-            print(
-                f"Position: {population.global_best_position}\n Score: {population.global_best_score}"
-            )
-        if logging.show_plots:
-            antenna.display(
-                population.global_best_position,
-                population.global_best_tiled_position,
-                population.global_best_tile_labels,
-            )
-    return result
+    def update_results(self):
+            self.result.append(
+        {
+            "best_position_history": self.population.global_best_position,
+            "best_tiled_position_history": self.population.global_best_tiled_position,
+            "best_tile_labels_history": self.population.global_best_tile_labels,
+            "best_score_history": self.population.global_best_score,
+        }
+    )
+
+    def run(self):
+        for step_counter in range(self.parameters.max_steps):
+            self.population.step()
+            self.update_results()
+            if self.logging.verbose:
+                print(f"Step: {step_counter}/{self.parameters.max_steps-1}")
+                print(
+                    f"Position: {self.population.global_best_position}\n Score: {self.population.global_best_score}"
+                )
+            if self.logging.show_plots:
+                self.antenna.display(
+                    self.population.global_best_position,
+                    self.population.global_best_tiled_position,
+                    self.population.global_best_tile_labels,
+                )
+        return result
 
 
 def beamformer(antenna, parameters, logging, config_name):
-    if logging.use_uniform_particle:
-        debug_particle = Particle(antenna, parameters, uniform=True)
-        antenna.display(debug_particle.position, debug_particle.position, persist=True)
-        return None
-    else:
-        if logging.verbose:
-            print(f"Starting simulation: {config_name}")
-        result = particle_swarm_optimisation(antenna, parameters, logging)
-        if logging.verbose:
-            print("Done.")
-        if logging.show_plots:
-            antenna.display(
-                result[-1]["best_position_history"],
-                result[-1]["best_tiled_position_history"],
-                persist=logging.plots_persist,
-            )
-        return result
+    particle_swamp_optimiser = PSO(antenna, parameters, logging)
+    if logging.verbose:
+        print(f"Starting simulation: {config_name}")
+    result = particle_swamp_optimiser.run()
+    if logging.verbose:
+        print("Done.")
+    if logging.show_plots:
+        antenna.display(
+            result[-1]["best_position_history"],
+            result[-1]["best_tiled_position_history"],
+            persist=logging.plots_persist,
+        )
+    return result
