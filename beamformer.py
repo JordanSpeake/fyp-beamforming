@@ -1,5 +1,4 @@
 import numpy as np
-from dataclasses import dataclass
 from sklearn.cluster import KMeans
 
 
@@ -16,7 +15,7 @@ class Particle:
         self.phase_bit_depth = parameters.phase_bit_depth
         self.best_position = self.position
         self.best_known_position = self.position
-        self.tiled_position = (np.zeros_like(self.position))
+        self.tiled_position = np.zeros_like(self.position)
         self.clusters = parameters.num_tiles
         self.tile_labels = np.zeros_like(self.position, dtype=int)
         self.tile_values = np.zeros(self.clusters, dtype=complex)
@@ -71,10 +70,9 @@ class Particle:
 
     def quantize_phase(self, phase):
         # TODO - Implement Numba on this function
-        quantisation_step = int((phase/2*np.pi) * np.power(2, self.phase_bit_depth))
+        quantisation_step = int((phase / 2 * np.pi) * np.power(2, self.phase_bit_depth))
         phase = quantisation_step * 255 * 2 * np.pi
         return phase
-
 
     def random_complex(self, size):
         """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
@@ -85,7 +83,6 @@ class Particle:
     def update_velocity(self):
         """Set and limit velocity of particle to max_particle_velocity and wrap direction [0, 2pi]
         Called by step()"""
-        # TODO should the random numbers here be complex as well? or just reals?
         inertial_component = self.inertia_weight * self.velocity
         cognitive_component = (
             self.cognitive_coeff
@@ -105,7 +102,6 @@ class Particle:
 
     def set_best_known(self, new_best_known):
         """Update the particle with a best_known position, distinct from the particle's own best position"""
-        # TODO - should this check if the new_best_known is actually better?
         self.best_known_position = new_best_known.tiled_position
         self.best_known_score = new_best_known.score
 
@@ -173,13 +169,15 @@ def particle_swarm_optimisation(antenna, parameters, logging):
             )
         if logging.show_plots:
             antenna.display(
-                population.global_best_position, population.global_best_tiled_position, population.global_best_tile_labels
+                population.global_best_position,
+                population.global_best_tiled_position,
+                population.global_best_tile_labels,
             )
     return result
 
 
 def beamformer(antenna, parameters, logging, config_name):
-    if logging.debug:
+    if logging.use_uniform_particle:
         debug_particle = Particle(antenna, parameters, uniform=True)
         antenna.display(debug_particle.position, debug_particle.position, persist=True)
         return None
@@ -188,7 +186,7 @@ def beamformer(antenna, parameters, logging, config_name):
             print(f"Starting simulation: {config_name}")
         result = particle_swarm_optimisation(antenna, parameters, logging)
         if logging.verbose:
-            print("Simulation stopped")
+            print("Done.")
         if logging.show_plots:
             antenna.display(
                 result[-1]["best_position_history"],

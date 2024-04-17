@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
+
 class Antenna:
     def __init__(self, frequency, num_elements, parameters):
         self.frequency = frequency
@@ -34,7 +35,14 @@ class Antenna:
     def update_tiling_plot(self, tile_labels):
         assert False, "update_tiling_plot() must be defined in child class."
 
-    def display(self, untiled_weights, tiled_weights, tile_labels, persist=False, pause_time=0.01):
+    def display(
+        self,
+        untiled_weights,
+        tiled_weights,
+        tile_labels,
+        persist=False,
+        pause_time=0.01,
+    ):
         untiled_af = self.array_factor(untiled_weights)
         tiled_af = self.array_factor(tiled_weights)
         R, P = np.meshgrid(self.phi_samples, self.theta_samples)
@@ -48,7 +56,6 @@ class Antenna:
             plt.show()
         else:
             plt.pause(pause_time)
-
 
     def fitness(self, element_complex_weights, parameters):
         # TODO replace with LMS
@@ -106,15 +113,31 @@ class RectangularPlanar(Antenna):
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
-        self.ax_tile_pattern.set_xticks(np.arange(start=0, stop=self.num_el_x + 1, step=1))
-        self.ax_tile_pattern.set_yticks(np.arange(start=0, stop=self.num_el_y + 1, step=1))
+        self.ax_tile_pattern.set_xticks(
+            np.arange(start=0, stop=self.num_el_x + 1, step=1)
+        )
+        self.ax_tile_pattern.set_yticks(
+            np.arange(start=0, stop=self.num_el_y + 1, step=1)
+        )
         self.ax_tile_pattern.grid(True)
-        colors = ["red", "green", "blue", "cyan", "magenta", "yellow", "orange", "purple"]
+        colors = [
+            "red",
+            "green",
+            "blue",
+            "cyan",
+            "magenta",
+            "yellow",
+            "orange",
+            "purple",
+        ]
         element_count = self.num_el_x * self.num_el_y
         for element in range(element_count):
             tile_group = tile_labels[element]
             x, y = np.divmod(element, self.num_el_x)
-            self.ax_tile_pattern.fill_between([x, x + 1], y, y - 1, color=colors[tile_group])
+            self.ax_tile_pattern.fill_between(
+                [x, x + 1], y, y - 1, color=colors[tile_group]
+            )
+
 
 class UniformLinear(Antenna):
     def __init__(self, frequency: float, spacing: float, num_el: int, parameters):
@@ -148,13 +171,26 @@ class UniformLinear(Antenna):
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
-        self.ax_tile_pattern.set_xticks(np.arange(start=0, stop=self.num_elements + 1, step=1))
+        self.ax_tile_pattern.set_xticks(
+            np.arange(start=0, stop=self.num_elements + 1, step=1)
+        )
         self.ax_tile_pattern.grid(True)
-        colors = ["red", "green", "blue", "cyan", "magenta", "yellow", "orange", "purple"]
+        colors = [
+            "red",
+            "green",
+            "blue",
+            "cyan",
+            "magenta",
+            "yellow",
+            "orange",
+            "purple",
+        ]
         for element in range(self.num_elements):
             tile_group = tile_labels[element]
             x, y = np.divmod(element, self.num_elements)
-            self.ax_tile_pattern.fill_between([x, x + 1], y, y - 1, color=colors[tile_group])
+            self.ax_tile_pattern.fill_between(
+                [x, x + 1], y, y - 1, color=colors[tile_group]
+            )
 
 
 class Circular(Antenna):
@@ -195,14 +231,26 @@ class Circular(Antenna):
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
-
     def update_tiling_plot(self, tile_labels):
         # NOTE - This is the same as ULA plot for now, making it circular is a pain!
         self.ax_tile_pattern.clear()
-        self.ax_tile_pattern.set_xticks(np.arange(start=0, stop=self.num_elements + 1, step=1))
+        self.ax_tile_pattern.set_xticks(
+            np.arange(start=0, stop=self.num_elements + 1, step=1)
+        )
         self.ax_tile_pattern.grid(True)
-        colors = ["red", "green", "blue", "cyan", "magenta", "yellow", "orange", "purple"]
+        colors = [
+            "red",
+            "green",
+            "blue",
+            "cyan",
+            "magenta",
+            "yellow",
+            "orange",
+            "purple",
+        ]
         for element in range(self.num_elements):
             tile_group = tile_labels[element]
             x, y = np.divmod(element, self.num_elements)
-            self.ax_tile_pattern.fill_between([x, x + 1], y, y - 1, color=colors[tile_group])
+            self.ax_tile_pattern.fill_between(
+                [x, x + 1], y, y - 1, color=colors[tile_group]
+            )

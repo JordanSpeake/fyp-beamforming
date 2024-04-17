@@ -1,14 +1,21 @@
-import beamformer as bf
-import numpy as np
-import argparse, setup_utils, antennas, csv, datetime
+"""The entry-point for the beamforming simulator
+usage: python simulator.py --config path/to/config.toml"""
+
+import argparse
+import csv
+import datetime
 
 try:
     import tomlib
 except ImportError:
     import tomli as tomlib
+import beamformer as bf
+import bf_utils
+import antennas
 
 
-def parse_config(path_to_config):
+def read_config(path_to_config):
+    """Parses the provided TOML file, generating classes required for the simulation"""
     with open(path_to_config, "rb") as file:
         data = tomlib.load(file)
         parameters = parse_parameters_config(data["parameters"])
@@ -22,7 +29,7 @@ def parse_config(path_to_config):
             return None
         try:
             config_name = data["config_name"]
-        except KeyError as e:
+        except KeyError:
             config_name = "untitled_config"
         return {
             "config_name": config_name,
@@ -33,6 +40,7 @@ def parse_config(path_to_config):
 
 
 def parse_antenna_config(data, parameters_config):
+    """Constructs an instants of an Antenna child class defined in [antenna] in the config file"""
     try:
         if data["type"] == "UniformLinear":
             return antennas.UniformLinear(
@@ -41,14 +49,14 @@ def parse_antenna_config(data, parameters_config):
                 data["num_elements"],
                 parameters_config,
             )
-        elif data["type"] == "Circular":
+        if data["type"] == "Circular":
             return antennas.Circular(
                 data["frequency"],
                 data["radius"],
                 data["num_elements"],
                 parameters_config,
             )
-        elif data["type"] == "RectangularPlanar":
+        if data["type"] == "RectangularPlanar":
             return antennas.RectangularPlanar(
                 data["frequency"],
                 data["spacing"],
@@ -58,13 +66,14 @@ def parse_antenna_config(data, parameters_config):
     except KeyError as e:
         print(f"Failed to parse antenna config: {e}")
         return None
-    print(f"No/invalid specified antenna")
+    print("No/invalid specified antenna")
     return None
 
 
 def parse_parameters_config(data):
+    """Constructs an instants of the parameters calss defined in [parameters] in the config file"""
     try:
-        parameters = setup_utils.Parameters(
+        parameters = bf_utils.Parameters(
             population_size=data["population_size"],
             samples=data["samples"],
             cognitive_coeff=data["cognitive_coeff"],
@@ -84,12 +93,14 @@ def parse_parameters_config(data):
 
 
 def parse_logging_config(data):
+    """Constructs an instants of the Logging class defined in [logging] in the config file"""
     try:
-        logging = setup_utils.Logging(
+        logging = bf_utils.Logging(
             show_plots=data["show_plots"],
             plots_persist=data["plots_persist"],
             verbose=data["verbose"],
-            debug=data["debug"],
+            write_results=data["write_results"],
+            use_uniform_particle=data["use_uniform_particle"],
         )
     except KeyError as e:
         print(f"Failed to parse logging config: {e}")
@@ -97,13 +108,14 @@ def parse_logging_config(data):
     return logging
 
 
-def get_config(args):
+def parse_config(args):
+    """Returns a parsed config file from the provided arguments"""
     try:
         path_to_config = args.config[0]
     except SystemExit:
         print("Invalid path to config file")
         return None
-    config = parse_config(path_to_config)
+    config = read_config(path_to_config)
     if config is None:
         print(f"Error in config file: {path_to_config}")
         return None
@@ -111,12 +123,14 @@ def get_config(args):
 
 
 def get_output_path(config_name):
+    """Constructs the path and name for the output .csv file"""
     datetime_marker = datetime.datetime.now().strftime("%Y%m%d-%H_%M_%S")
     output_path = f"./{config_name}_{datetime_marker}.csv"
     return output_path
 
 
-def main():
+def generate_simulator_setup():
+    """Generate the required classes for running the simulation"""
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config",
@@ -126,15 +140,26 @@ def main():
         help="--config ./path/to/config.toml",
     )
     arguments = parser.parse_args()
-    config = get_config(arguments)
-    if config is None:
-        return
-    config_name = config["config_name"]
-    parameters = config["parameters"]
-    logging = config["logging"]
-    antenna = config["antenna"]
-    if not logging.debug:
-        output_path = get_output_path(config["config_name"])
+    config = parse_config(arguments)
+    return (
+        config["antenna"],
+        config["parameters"],
+        config["logging"],
+        config["config_name"],
+    )
+
+
+def write_results(bf_result, file):
+    """Write the results from beamformer.py to the specified file"""
+    writer = csv.DictWriter(file, fieldnames=bf_result[0].keys(), dialect="excel")
+    writer.writeheader()
+    writer.writerows(bf_result)
+
+
+def main():
+    antenna, parameters, logging, config_name = generate_simulator_setup()
+    if logging.write_results:
+        output_path = get_output_path(config_name)
         with open(output_path, "w", newline="", encoding="utf-8") as file:
             try:
                 result = bf.beamformer(antenna, parameters, logging, config_name)
@@ -142,14 +167,9 @@ def main():
             except Exception as e:
                 print(f"Simulation cancelled, error in beamformer.py: {e}")
             else:
-                writer = csv.DictWriter(
-                    file, fieldnames=result[0].keys(), dialect="excel"
-                )
-                writer.writeheader()
-                writer.writerows(result)
-            print(f"Simulation results written successfully")
+                write_results(result, file)
+            print("Simulation results written successfully")
     else:
-        print(f"DEBUG: {config_name}")
         _ = bf.beamformer(antenna, parameters, logging, config_name)
     print("Done.")
 

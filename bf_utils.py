@@ -7,7 +7,8 @@ class Logging:
     show_plots: bool = False
     plots_persist: bool = False
     verbose: bool = False
-    debug: bool = False
+    write_results: bool = False
+    use_uniform_particle: bool = False
 
 
 class Parameters:
