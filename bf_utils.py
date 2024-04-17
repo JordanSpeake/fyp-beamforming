@@ -27,7 +27,7 @@ class Parameters:
         phase_bit_depth,
     ):
         self.population_size = population_size
-        self.samples = samples  # the number of samples taken when calculating the array factor in each direction
+        self.samples = samples
         self.theta = np.linspace(-np.pi / 2, np.pi / 2, samples)
         self.phi = np.linspace(-np.pi / 2, np.pi / 2, samples)
         self.cognitive_coeff = cognitive_coeff
