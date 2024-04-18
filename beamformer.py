@@ -157,7 +157,7 @@ class PSO:
                     self.population.best_particle.tiled_position,
                     self.population.best_particle.tile_labels,
                 )
-        return result
+        return self.result
 
 
 def beamformer(antenna, parameters, logging, config_name):
