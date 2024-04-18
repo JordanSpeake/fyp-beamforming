@@ -1,139 +1,102 @@
 import numpy as np
 from sklearn.cluster import KMeans
-
+import bf_utils
 
 class Particle:
     def __init__(self, antenna, parameters, uniform=False):
         if uniform:
-            self.velocity = np.zeros(antenna.num_elements) * np.exp(
-                1j * np.zeros(antenna.num_elements) * 2 * np.pi
-            )
+            self.velocity = np.zeros(antenna.num_elements, dtype=complex)
             self.position = np.ones(antenna.num_elements, dtype=complex)
         else:
-            self.velocity = self.random_complex(antenna.num_elements)
-            self.position = self.random_complex(antenna.num_elements)
-        self.phase_bit_depth = parameters.phase_bit_depth
+            self.velocity = bf_utils.random_complex(antenna.num_elements)
+            self.position = bf_utils.random_complex(antenna.num_elements)
         self.best_position = self.position
-        self.best_known_position = self.position
-        self.tiled_position = np.zeros_like(self.position)
-        self.clusters = parameters.num_tiles
-        self.tile_labels = np.zeros_like(self.position, dtype=int)
-        self.tile_values = np.zeros(self.clusters, dtype=complex)
-        self.score = antenna.fitness(self.tiled_position, parameters)
+        self.best_neighbour = None
+        self.tile_labels = np.zeros(antenna.num_elements, dtype=int)
+        self.tile_values = np.zeros(parameters.num_tiles, dtype=complex)
+        self.tiled_position = np.zeros(antenna.num_elements, dtype=complex)
+        self.score = antenna.fitness(self.position, parameters)
         self.best_score = self.score
-        self.best_known_score = self.score
-        self.dimensions = antenna.num_elements
-        self.max_velocity = parameters.max_particle_velocity
+
+
+class Population:
+    def __init__(self, antenna, parameters, uniform=False):
+        self.population = []
+        for i in range(parameters.population_size):
+            self.population.append(Particle(antenna, parameters, uniform=uniform))
+        self.neighbourhood_size = parameters.neighbourhood_size
+        self.best_particle = self.population[0]
+
+        self.fitness_function = lambda p: antenna.fitness(p, parameters)
         self.inertia_weight = parameters.intertia_weight
         self.cognitive_coeff = parameters.cognitive_coeff
         self.social_coeff = parameters.social_coeff
+        self.max_velocity = parameters.max_particle_velocity
+        self.phase_bit_depth = parameters.phase_bit_depth
 
-    def generate_tiling(self):
-        """Uses k means clustering to update tiled_position, based on phase and amplitude"""
-        separated_position = np.zeros((self.dimensions, 2))
-        separated_position[:, 0] = np.abs(self.position)
-        separated_position[:, 1] = np.angle(self.position)
-        kmeans = KMeans(n_clusters=self.clusters).fit(separated_position)
-        self.tile_labels = kmeans.labels_
-        centres = kmeans.cluster_centers_
-        self.tile_values = centres[:, 0] * np.exp(1j * centres[:, 1])
-        for index, label in enumerate(self.tile_labels):
-            self.tiled_position[index] = self.tile_values[label]
+        self.num_elements = antenna.num_elements
+        self.clusters = parameters.num_tiles
 
-    def step(self, fitness_function):
-        """Move the particle to the next position, then update it's score based on the provided fitness function"""
-        self.update_velocity()
-        self.update_position()
-        self.generate_tiling()
-        self.update_score(fitness_function)
+    def quantize_phase(self, phase):
+        bits = np.power(2, self.phase_bit_depth)
+        quantisation_step = int((phase / 2 * np.pi) * bits)
+        phase = quantisation_step  * 2 * np.pi / bits
+        return phase
 
-    def update_score(self, fitness_function):
-        """Update the particle's score with the provided fitness function
-        Called by step()"""
-        self.score = fitness_function(self.tiled_position)
-        if self.score > self.best_score:
-            self.best_position = self.tiled_position
-            self.best_score = self.score
-        if self.score > self.best_known_score:
-            self.best_known_position = self.tiled_position
-            self.best_known_score = self.score
+    def update_velocity(self, particle):
+        """Set and limit velocity of particle to max_particle_velocity and wrap direction [0, 2pi]"""
+        inertial_component = self.inertia_weight * particle.velocity
+        cognitive_component = (
+            self.cognitive_coeff
+            * bf_utils.random_complex(self.num_elements)
+            * (np.subtract(particle.best_position, particle.position))
+        )
+        social_component = (
+            self.social_coeff
+            * bf_utils.random_complex(self.num_elements)
+            * (np.subtract(particle.best_neighbour.position, particle.position))
+        )
+        velocity = inertial_component + cognitive_component + social_component
+        speed = np.clip(np.abs(velocity), 0, self.max_velocity)
+        direction = np.mod(np.angle(velocity), 2 * np.pi)
+        particle.velocity = speed * np.exp(1j * direction)
 
-    def update_position(self):
-        """Set and limit magnitude (weights) of particle to 1 and wrap its angle (phase) [0, 2pi]
-        Called by step()"""
-        position = np.add(self.position, self.velocity)
+    def update_position(self, particle):
+        """Set and limit magnitude (weights) of particle to 1 and wrap its angle (phase) [0, 2pi]"""
+        position = np.add(particle.position, particle.velocity)
         weights = np.clip(np.abs(position), 0, 1)
         phases = np.mod(np.angle(position), 2 * np.pi)
         for index, phase in enumerate(phases):
             phases[index] = self.quantize_phase(phase)
-        self.position = weights * np.exp(1j * phases)
+        particle.position = weights * np.exp(1j * phases)
 
-    def quantize_phase(self, phase):
-        # TODO - Implement Numba on this function
-        quantisation_step = int((phase / 2 * np.pi) * np.power(2, self.phase_bit_depth))
-        phase = quantisation_step * 255 * 2 * np.pi
-        return phase
+    def generate_tiling(self, particle):
+        """Uses k means clustering to update tiled_position, based on phase and amplitude"""
+        separated_position = np.zeros((self.num_elements, 2))
+        separated_position[:, 0] = np.abs(particle.position)
+        separated_position[:, 1] = np.angle(particle.position)
+        kmeans = KMeans(n_clusters=self.clusters).fit(separated_position)
+        particle.tile_labels = kmeans.labels_
+        centres = kmeans.cluster_centers_
+        particle.tile_values = centres[:, 0] * np.exp(1j * centres[:, 1])
+        for index, label in enumerate(particle.tile_labels):
+            particle.tiled_position[index] = particle.tile_values[label]
 
-    def random_complex(self, size):
-        """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
-        return np.sqrt(np.random.uniform(0, 1, size)) * np.exp(
-            1.0j * np.random.uniform(0, 2 * np.pi, size)
-        )
+    def update_score(self, particle, fitness_function):
+        """Update the particle's score with the provided fitness function"""
+        particle.score = fitness_function(particle.tiled_position)
+        if particle.score > self.best_particle.score:
+            self.best_particle = particle
 
-    def update_velocity(self):
-        """Set and limit velocity of particle to max_particle_velocity and wrap direction [0, 2pi]
-        Called by step()"""
-        inertial_component = self.inertia_weight * self.velocity
-        cognitive_component = (
-            self.cognitive_coeff
-            * self.random_complex(self.dimensions)
-            * (np.subtract(self.best_position, self.position))
-        )
-        social_component = (
-            self.social_coeff
-            * self.random_complex(self.dimensions)
-            * (np.subtract(self.best_known_position, self.position))
-        )
-        # TODO add component that influences particles toward their tiled position
-        velocity = inertial_component + cognitive_component + social_component
-        speed = np.clip(np.abs(velocity), 0, self.max_velocity)
-        direction = np.mod(np.angle(velocity), 2 * np.pi)
-        self.velocity += speed * np.exp(1j * direction)
-
-    def set_best_known(self, new_best_known):
-        """Update the particle with a best_known position, distinct from the particle's own best position"""
-        self.best_known_position = new_best_known.tiled_position
-        self.best_known_score = new_best_known.score
+    def update_particle(self, particle, fitness_function):
+        """Move the particle to the next position, then update it's score based on the provided fitness function"""
+        self.update_velocity(particle)
+        self.update_position(particle)
+        self.generate_tiling(particle)
+        self.update_score(particle, fitness_function)
 
 
-class Population:
-    def __init__(self, antenna, parameters):
-        self.population = []
-        for i in range(parameters.population_size):
-            self.population.append(Particle(antenna, parameters))
-        self.neighbourhood_size = parameters.neighbourhood_size
-        self.global_best_position = self.population[0].position
-        self.global_best_score = self.population[0].score
-        self.global_best_tiled_position = self.population[0].tiled_position
-        self.global_best_tile_labels = self.population[0].tile_labels
-        self.fitness_function = lambda p: antenna.fitness(p, parameters)
-
-    def step(self):
-        """Take a single step in the simulation, update all particles once and recalculate best position"""
-        # First update each particle's best-known position
-        for index, particle in enumerate(self.population):
-            best_particle_in_neighbourhood = self.best_particle_in_neighbourhood(index)
-            particle.set_best_known(self.population[best_particle_in_neighbourhood])
-        # Then step() each particle, updating their scores
-        for index, particle in enumerate(self.population):
-            particle.step(self.fitness_function)
-            if particle.score > self.global_best_score:
-                self.global_best_position = particle.position
-                self.global_best_tiled_position = particle.tiled_position
-                self.global_best_score = particle.score
-                self.global_best_tile_labels = particle.tile_labels
-
-    def best_particle_in_neighbourhood(self, index):
+    def best_neighbour_index(self, index):
         """Find the best scoring particle in the neighbourhood (by particle index) of a given particle"""
         neighbourhood = np.mod(
             np.arange(
@@ -144,9 +107,23 @@ class Population:
         best_score = float("-inf")
         best_particle_index = index
         for i in neighbourhood:
-            if self.population[i].best_score > best_score:
+            if self.population[i].score > best_score:
                 best_particle_index = i
         return best_particle_index
+
+
+    def update_best_neighbours(self):
+            for index, particle in enumerate(self.population):
+                particle.best_neighbour = self.population[self.best_neighbour_index(index)]
+
+    def step(self):
+        """Take a single step in the simulation, update all particles once."""
+        self.update_best_neighbours()
+        for particle in self.population:
+            self.update_particle(particle, self.fitness_function)
+            if particle.score > self.best_particle.score:
+                self.best_particle = particle
+
 
 class PSO:
     def __init__(self, antenna, parameters, logging):
@@ -159,10 +136,9 @@ class PSO:
     def update_results(self):
             self.result.append(
         {
-            "best_position_history": self.population.global_best_position,
-            "best_tiled_position_history": self.population.global_best_tiled_position,
-            "best_tile_labels_history": self.population.global_best_tile_labels,
-            "best_score_history": self.population.global_best_score,
+            "Position" : self.population.best_particle.position,
+            "Tiled Position" : self.population.best_particle.tiled_position,
+            "Score" : self.population.best_particle.score,
         }
     )
 
@@ -173,13 +149,13 @@ class PSO:
             if self.logging.verbose:
                 print(f"Step: {step_counter}/{self.parameters.max_steps-1}")
                 print(
-                    f"Position: {self.population.global_best_position}\n Score: {self.population.global_best_score}"
+                    f"Position: {self.population.best_particle.position}\n Score: {self.population.best_particle.score}"
                 )
             if self.logging.show_plots:
                 self.antenna.display(
-                    self.population.global_best_position,
-                    self.population.global_best_tiled_position,
-                    self.population.global_best_tile_labels,
+                    self.population.best_particle.position,
+                    self.population.best_particle.tiled_position,
+                    self.population.best_particle.tile_labels,
                 )
         return result
 

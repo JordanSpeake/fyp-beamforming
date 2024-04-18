@@ -2,6 +2,12 @@ import numpy as np
 from dataclasses import dataclass
 
 
+def random_complex(size):
+    """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
+    return np.sqrt(np.random.uniform(0, 1, size)) * np.exp(
+        1.0j * np.random.uniform(0, 2 * np.pi, size)
+    )
+
 @dataclass
 class Logging:
     show_plots: bool = False
