@@ -4,6 +4,7 @@ usage: python simulator.py --config path/to/config.toml"""
 import argparse
 import csv
 import datetime
+import os.path
 
 try:
     import tomlib
@@ -27,15 +28,11 @@ def read_config(path_to_config):
         logging = parse_logging_config(data["logging"])
         if logging is None:
             return None
-        try:
-            config_name = data["config_name"]
-        except KeyError:
-            config_name = "untitled_config"
         return {
-            "config_name": config_name,
             "antenna": antenna,
             "parameters": parameters,
             "logging": logging,
+            "config_name" : os.path.basename(path_to_config)
         }
 
 
@@ -127,6 +124,7 @@ def get_output_path(config_name):
     datetime_marker = datetime.datetime.now().strftime("%Y%m%d-%H_%M_%S")
     output_path = f"./{config_name}_{datetime_marker}.csv"
     return output_path
+
 
 
 def generate_simulator_setup():
