@@ -8,6 +8,16 @@ def random_complex(size):
         1.0j * np.random.uniform(0, 2 * np.pi, size)
     )
 
+
+def spherical_to_uv(spherical_coords):
+        """Convert [theta, phi] to [u, v]. From spherical to directional cosine coordinates."""
+        theta = spherical_coords[0]
+        phi = spherical_coords[1]
+        u = np.sin(theta) * np.cos(phi)
+        v = np.sin(theta) * np.sin(phi)
+        return np.asarray([u, v])
+
+
 @dataclass
 class Logging:
     show_plots: bool = False

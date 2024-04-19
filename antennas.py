@@ -1,5 +1,6 @@
 """Module containing class definitions of implemented antenna types"""
 
+import bf_utils
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -25,12 +26,21 @@ class Antenna:
 
     def update_array_factor_axis(self, axis, array_factor):
         """Reset and clear axes for the next step's data output to be plotted"""
-        unit_circle = patches.Circle((0, 0), 1, color='b', fill=False)
+        unit_circle = patches.Circle((0, 0), 1, color='k', fill=False)
         axis.clear()
         axis.set_xlabel("U")
         axis.set_ylabel("V")
         axis.imshow(array_factor, cmap='seismic', interpolation='nearest', extent=[-1, 1, -1, 1])
         axis.add_patch(unit_circle)
+
+    def add_doi_indicators(self):
+        """Adds marks on the array factor plots indicating the DOIs"""
+        axes = [self.ax_tiled, self.ax_untiled]
+        for target in self.targets:
+            pos = bf_utils.spherical_to_uv(target)
+            print(pos)
+            for axis in axes:
+                axis.add_patch(patches.Circle((pos[0], pos[1]), 0.05, color='k', fill=False))
 
     def display(
         self,
@@ -42,28 +52,21 @@ class Antenna:
     ):
         """Display the given untiled and tiled weights, including the selection pattern"""
         self.update_array_factor_axis(self.ax_untiled, self.array_factor(untiled_weights))
+        self.update_array_factor_axis(self.ax_tiled, self.array_factor(tiled_weights))
         self.ax_tiled.set_title("TILED: Array Factor")
         self.ax_untiled.set_title("UNTILED: Array Factor")
-        self.update_array_factor_axis(self.ax_tiled, self.array_factor(tiled_weights))
+        self.add_doi_indicators()
         self.update_tiling_plot(tile_labels)
         if persist:
             plt.show()
         else:
             plt.pause(pause_time)
 
-    def polar_to_uv(self, polar_coords):
-        """Convert [theta, phi] to [u, v]. From spherical to directional cosine"""
-        theta = polar_coords[0]
-        phi = polar_coords[1]
-        u = np.sin(theta) * np.cos(phi)
-        v = np.sin(theta) * np.sin(phi)
-        return np.asarray([u, v])
-
     def fitness(self, element_complex_weights, parameters):
         """Calculates the fitness of the given complex weights for this antenna"""
         score = 0
         for target in parameters.targets:
-            target_uv = self.polar_to_uv(target)
+            target_uv = bf_utils.spherical_to_uv(target)
             score += self.array_factor_single(
                 element_complex_weights, target[0], target[1]
             )
