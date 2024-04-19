@@ -21,15 +21,15 @@ class Antenna:
         self.ax_tile_pattern = self.figure.add_subplot(grid_spec[:, 1])
         self.ax_untiled = self.figure.add_subplot(grid_spec[0, 0])
         self.ax_tiled = self.figure.add_subplot(grid_spec[1, 0])
+        self.targets = parameters.targets
 
     def update_array_factor_axis(self, axis, array_factor):
         """Reset and clear axes for the next step's data output to be plotted"""
         unit_circle = patches.Circle((0, 0), 1, color='b', fill=False)
         axis.clear()
-        axis.set_title("Array Factor")
         axis.set_xlabel("U")
         axis.set_ylabel("V")
-        axis.imshow(array_factor, cmap='coolwarm', interpolation='nearest', extent=[-1, 1, -1, 1])
+        axis.imshow(array_factor, cmap='seismic', interpolation='nearest', extent=[-1, 1, -1, 1])
         axis.add_patch(unit_circle)
 
     def display(
@@ -42,6 +42,8 @@ class Antenna:
     ):
         """Display the given untiled and tiled weights, including the selection pattern"""
         self.update_array_factor_axis(self.ax_untiled, self.array_factor(untiled_weights))
+        self.ax_tiled.set_title("TILED: Array Factor")
+        self.ax_untiled.set_title("UNTILED: Array Factor")
         self.update_array_factor_axis(self.ax_tiled, self.array_factor(tiled_weights))
         self.update_tiling_plot(tile_labels)
         if persist:
@@ -99,10 +101,7 @@ class RectangularPlanar(Antenna):
                 element = m * self.num_el_y + n
                 exponent = phases[element] + 1j * self.wavenumber * (
                     m * self.spacing[0] * self.u_grid + n * self.spacing[1] * self.v_grid
-                ) #todo - verify that this is working all niceys
-                # print(f"AF: {array_factor.shape}")
-                # print(f"Weights: {weights.shape}")
-                # print(f"Exponent: {exponent.shape}")
+                )
                 array_factor += weights[element] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
@@ -148,23 +147,22 @@ class UniformLinear(Antenna):
     def array_factor(self, element_complex_weights):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = np.zeros_like(self.theta, dtype=complex)
+        array_factor = np.zeros((self.samples, self.samples), dtype=complex)
         for element in range(self.num_elements):
             exponent = phases[element] + (
-                1j * self.wavenumber * (element * self.spacing * self.sin_u)
+                1j * self.wavenumber * (element * self.spacing * self.u_grid)
             )
             array_factor += weights[element] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
-    def array_factor_single(self, element_complex_weights, theta, phi):
+    def array_factor_single(self, element_complex_weights, u, v):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
         array_factor = 0 + 0j
-        exponent_constant = self.spacing * np.sin(theta) * np.cos(phi)
         for element in range(self.num_elements):
             exponent = phases[element] + (
-                1j * self.wavenumber * (element * exponent_constant)
+                1j * self.wavenumber * (element * self.spacing * u * v)
             )
             array_factor += weights[element] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
@@ -193,31 +191,29 @@ class Circular(Antenna):
     def array_factor(self, element_complex_weights):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = np.zeros_like(self.theta, dtype=complex)
+        array_factor = np.zeros((self.samples, self.samples), dtype=complex)
         for k in range(self.num_elements):
             element_angle = 2 * np.pi * k / self.num_elements
             exponent = phases[k] + 1j * self.wavenumber * (
                 self.radius
                 * (
-                    np.sin(element_angle) * self.sin_u
-                    + np.cos(element_angle) * self.sin_v
+                    np.sin(element_angle) * self.u_grid
+                    + np.cos(element_angle) * self.v_grid
                 )
             )
             array_factor += weights[k] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
         return array_factor
 
-    def array_factor_single(self, element_complex_weights, theta, phi):
+    def array_factor_single(self, element_complex_weights, u, v):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        sin_u = np.sin(theta) * np.cos(phi)
-        sin_v = np.sin(theta) * np.sin(phi)
         array_factor = 0 + 0j
         for k in range(self.num_elements):
             element_angle = 2 * np.pi * k / self.num_elements
             exponent = phases[k] + 1j * self.wavenumber * (
                 self.radius
-                * (np.sin(element_angle) * sin_u + np.cos(element_angle) * sin_v)
+                * (np.sin(element_angle) * u + np.cos(element_angle) * v)
             )
             array_factor += weights[k] * np.exp(exponent)
         array_factor = 20 * np.log10(np.abs(array_factor))
