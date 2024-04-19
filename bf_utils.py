@@ -1,6 +1,6 @@
 import numpy as np
 from dataclasses import dataclass
-
+import matplotlib.pyplot as plt
 
 def random_complex(size):
     """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
@@ -33,17 +33,18 @@ class Parameters:
         phase_bit_depth,
     ):
         self.population_size = population_size
-        self.samples = samples
-        self.theta = np.linspace(-np.pi / 2, np.pi / 2, samples)
-        self.phi = np.linspace(-np.pi / 2, np.pi / 2, samples)
         self.cognitive_coeff = cognitive_coeff
         self.social_coeff = social_coeff
         self.intertia_weight = intertia_weight
         self.max_steps = max_steps
+        self.max_particle_velocity = max_particle_velocity
+        self.neighbourhood_size = neighbourhood_size
+
         self.targets = (
             ((np.asarray(static_targets, dtype=float) / (np.pi)) + 0.5) * samples - 1
         ).astype(int)
-        self.max_particle_velocity = max_particle_velocity
-        self.neighbourhood_size = neighbourhood_size
         self.num_tiles = num_tiles
         self.phase_bit_depth = phase_bit_depth
+
+        self.samples = samples
+        self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
