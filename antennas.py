@@ -110,17 +110,15 @@ class Antenna:
             doi_bw = doi[2]
             doi_mle = self.calculate_MLE(doi_uv, doi_bw, complex_weights)
             mle_sum += doi_mle
-            print(doi_mle)
             mle.append(doi_mle)
-        # sle = self.calculate_SLE(complex_weights, mle_sum)
-        # islr = sle - mle_sum
+        sle = self.calculate_SLE(complex_weights, mle_sum)
+        islr = sle/mle_sum
         # print(f"MLEs: {mle}")
         # print(f"SLR: {sle}")
         # print(f"ISLR: {islr}")
-        # if return_full_data:
-        #     return islr, mle, mle_sum, sle
-        # return islr
-        return mle_sum
+        if return_full_data:
+            return islr, mle, mle_sum, sle
+        return islr
 
     def update_tiling_plot(self, tile_labels):
         #pylint: disable=unused-argument
