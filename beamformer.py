@@ -15,7 +15,7 @@ class Particle:
         self.tile_labels = np.zeros(antenna.num_elements, dtype=int)
         self.tile_values = np.zeros(parameters.num_tiles, dtype=complex)
         self.tiled_position = np.zeros(antenna.num_elements, dtype=complex)
-        self.score = antenna.fitness(self.position, parameters)
+        self.score = float("-inf")
         self.best_score = self.score
 
 
@@ -27,7 +27,7 @@ class Population:
         self.neighbourhood_size = parameters.neighbourhood_size
         self.best_particle = self.population[0]
 
-        self.fitness_function = lambda p: antenna.fitness(p, parameters)
+        self.fitness_function = lambda p: antenna.fitness(p)
         self.inertia_weight = parameters.intertia_weight
         self.cognitive_coeff = parameters.cognitive_coeff
         self.social_coeff = parameters.social_coeff

@@ -62,26 +62,70 @@ class Antenna:
         else:
             plt.pause(pause_time)
 
-    def fitness(self, element_complex_weights, parameters):
-        """Calculates the fitness of the given complex weights for this antenna"""
-        score = 0
-        for target in parameters.targets:
-            target_uv = bf_utils.spherical_to_uv(target)
-            score += self.array_factor_single(
-                element_complex_weights, target[0], target[1]
-            )
-        return score
+    def estimate_MLE_region(self, doi, bw):
+        u_range = np.clip([doi[0] - bw, doi[0] + bw], -1, 1)
+        v_range = np.clip([doi[1] - bw, doi[1] + bw], -1, 1)
+        u_sample_range = np.rint(np.multiply(np.divide(np.add(u_range, 1), 2), (self.samples-1)))
+        v_sample_range = np.rint(np.multiply(np.divide(np.add(v_range, 1), 2), (self.samples-1)))
+        return np.asarray(u_sample_range, dtype=int), np.asarray(v_sample_range, dtype=int)
 
+    def calculate_MLE(self, doi, beamwidth, complex_weights):
+        """Estimate the lobe energy at the given DOI, with the defined complex weights"""
+        u_sample_range, v_sample_range = self.estimate_MLE_region(doi, beamwidth)
+        integration_constant = np.power(1/self.samples, 2)
+        accumulator = 0
+        for u_sample in u_sample_range:
+            for v_sample in v_sample_range:
+                u = self.u_grid[0][u_sample]
+                v = self.v_grid[v_sample][0]
+                array_factor = self.array_factor_single(complex_weights, u, v)
+                w = np.sqrt(1 - np.power(u, 2) - np.power(v, 2))
+                accumulator += (array_factor / np.abs(w))
+        mle = accumulator * integration_constant
+        return mle
+
+    def calculate_SLE(self, complex_weights, mle_sum):
+        """Estimates SLE as the total energy minus the sum of all MLEs. Rough estimate."""
+        array_factor = self.array_factor(complex_weights)
+        integration_constant = np.power(1/self.samples, 2)
+        w = 4 * np.pi / 3 # Estimate, w=4pi/3 when integrated over the unit disc, not correct but close enough.
+        sle = (np.sum(array_factor) * integration_constant / w) - mle_sum
+        return sle
+
+    def fitness(self, complex_weights, return_full_data=False):
+        """Return the islr, and optionally other data, of a given set of complex weights
+
+        mle - Main Lobe Energy
+        sle - Sidelobe Energy
+        islr - Integrated Sidelobe Ratio
+        """
+        mle_sum = 0
+        mle = []
+        for doi in self.targets:
+            doi_uv = bf_utils.spherical_to_uv(doi[0:2])
+            doi_bw = doi[2]
+            doi_mle = self.calculate_MLE(doi_uv, doi_bw, complex_weights)
+            mle_sum += doi_mle
+            mle.append(doi_mle)
+        # sle = self.calculate_SLE(complex_weights, mle_sum)
+        # islr = sle - mle_sum
+        # print(f"MLEs: {mle}")
+        # print(f"SLR: {sle}")
+        # print(f"ISLR: {islr}")
+        # if return_full_data:
+        #     return islr, mle, mle_sum, sle
+        # return islr
+        return mle_sum
 
     def update_tiling_plot(self, tile_labels):
         #pylint: disable=unused-argument
         assert False, "update_tiling_plot() must be defined in child class."
 
-    def array_factor_single(self, element_complex_weights, theta, phi):
+    def array_factor_single(self, complex_weights, u, v):
         #pylint: disable=unused-argument
         assert False, "array_factor_single() must be defined in child class."
 
-    def array_factor(self, element_complex_weights):
+    def array_factor(self, complex_weights):
         #pylint: disable=unused-argument
         assert False, "array_factor() must be defined in child class."
 
@@ -106,7 +150,7 @@ class RectangularPlanar(Antenna):
                     m * self.spacing[0] * self.u_grid + n * self.spacing[1] * self.v_grid
                 )
                 array_factor += weights[element] * np.exp(exponent)
-        array_factor = 20 * np.log10(np.abs(array_factor))
+        array_factor = 10 * np.log10(np.abs(array_factor))
         return array_factor
 
     def array_factor_single(self, element_complex_weights, u, v):
@@ -120,7 +164,7 @@ class RectangularPlanar(Antenna):
                     m * self.spacing[0] * u + n * self.spacing[1] * v
                 )
                 array_factor += weights[element] * np.exp(exponent)
-        array_factor = 20 * np.log10(np.abs(array_factor))
+        array_factor = 10 * np.log10(np.abs(array_factor))
         return array_factor
 
     def update_tiling_plot(self, tile_labels):
@@ -156,7 +200,7 @@ class UniformLinear(Antenna):
                 1j * self.wavenumber * (element * self.spacing * self.u_grid)
             )
             array_factor += weights[element] * np.exp(exponent)
-        array_factor = 20 * np.log10(np.abs(array_factor))
+        array_factor = 10 * np.log10(np.abs(array_factor))
         return array_factor
 
     def array_factor_single(self, element_complex_weights, u, v):
@@ -168,7 +212,7 @@ class UniformLinear(Antenna):
                 1j * self.wavenumber * (element * self.spacing * u * v)
             )
             array_factor += weights[element] * np.exp(exponent)
-        array_factor = 20 * np.log10(np.abs(array_factor))
+        array_factor = 10 * np.log10(np.abs(array_factor))
         return array_factor
 
     def update_tiling_plot(self, tile_labels):
@@ -205,7 +249,7 @@ class Circular(Antenna):
                 )
             )
             array_factor += weights[k] * np.exp(exponent)
-        array_factor = 20 * np.log10(np.abs(array_factor))
+        array_factor = 10 * np.log10(np.abs(array_factor))
         return array_factor
 
     def array_factor_single(self, element_complex_weights, u, v):
@@ -219,7 +263,7 @@ class Circular(Antenna):
                 * (np.sin(element_angle) * u + np.cos(element_angle) * v)
             )
             array_factor += weights[k] * np.exp(exponent)
-        array_factor = 20 * np.log10(np.abs(array_factor))
+        array_factor = 10 * np.log10(np.abs(array_factor))
         return array_factor
 
     def update_tiling_plot(self, tile_labels):

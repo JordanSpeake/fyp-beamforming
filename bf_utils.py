@@ -49,12 +49,8 @@ class Parameters:
         self.max_steps = max_steps
         self.max_particle_velocity = max_particle_velocity
         self.neighbourhood_size = neighbourhood_size
-
-        self.targets = (
-            ((np.asarray(static_targets, dtype=float) / (np.pi)) + 0.5) * samples - 1
-        ).astype(int)
+        self.targets = static_targets
         self.num_tiles = num_tiles
         self.phase_bit_depth = phase_bit_depth
-
         self.samples = samples
         self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
