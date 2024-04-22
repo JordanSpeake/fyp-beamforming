@@ -118,7 +118,7 @@ class Antenna:
         # print(f"ISLR: {islr}")
         if return_full_data:
             return islr, mle, mle_sum, sle
-        return islr
+        return 1/islr
 
     def update_tiling_plot(self, tile_labels):
         #pylint: disable=unused-argument
