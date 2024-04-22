@@ -92,13 +92,12 @@ class Antenna:
         """Estimates SLE as the total energy minus the sum of all MLEs. Rough estimate."""
         radiated_power = self.radiated_power(complex_weights)
         integration_constant = np.power(1/self.samples, 2)
-        w = 4 * np.pi / 3 # Estimate, w=4pi/3 when integrated over the unit disc, not correct but close enough.
+        w = 2 * np.pi / 3 # Estimate, w=2pi/3 when integrated over the unit disc, not correct but close enough.
         sle = (np.sum(radiated_power) * integration_constant / w) - mle_sum
         return sle
 
     def fitness(self, complex_weights, return_full_data=False):
         """Return the islr, and optionally other data, of a given set of complex weights
-
         mle - Main Lobe Energy
         sle - Sidelobe Energy
         islr - Integrated Sidelobe Ratio
