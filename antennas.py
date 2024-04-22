@@ -51,10 +51,14 @@ class Antenna:
         pause_time=0.1,
     ):
         """Display the given untiled and tiled weights, including the selection pattern"""
-        self.update_array_factor_axis(self.ax_untiled, self.array_factor(untiled_weights))
-        self.update_array_factor_axis(self.ax_tiled, self.array_factor(tiled_weights))
+        untiled_array_factor = 10 * np.log10(self.radiated_power(untiled_weights))
+        self.update_array_factor_axis(self.ax_untiled, untiled_array_factor)
         self.ax_tiled.set_title("TILED: Array Factor")
+
+        tiled_array_factor = 10 * np.log10(self.radiated_power(tiled_weights))
+        self.update_array_factor_axis(self.ax_tiled, tiled_array_factor)
         self.ax_untiled.set_title("UNTILED: Array Factor")
+
         self.add_doi_indicators()
         self.update_tiling_plot(tile_labels)
         if persist:
@@ -78,18 +82,18 @@ class Antenna:
             for v_sample in v_sample_range:
                 u = self.u_grid[0][u_sample]
                 v = self.v_grid[v_sample][0]
-                array_factor = self.array_factor_single(complex_weights, u, v)
+                radiated_power = self.radiated_power_single(complex_weights, u, v)
                 w = np.sqrt(1 - np.power(u, 2) - np.power(v, 2))
-                accumulator += (array_factor / np.abs(w))
+                accumulator += (radiated_power / np.abs(w))
         mle = accumulator * integration_constant
         return mle
 
     def calculate_SLE(self, complex_weights, mle_sum):
         """Estimates SLE as the total energy minus the sum of all MLEs. Rough estimate."""
-        array_factor = self.array_factor(complex_weights)
+        radiated_power = self.radiated_power(complex_weights)
         integration_constant = np.power(1/self.samples, 2)
         w = 4 * np.pi / 3 # Estimate, w=4pi/3 when integrated over the unit disc, not correct but close enough.
-        sle = (np.sum(array_factor) * integration_constant / w) - mle_sum
+        sle = (np.sum(radiated_power) * integration_constant / w) - mle_sum
         return sle
 
     def fitness(self, complex_weights, return_full_data=False):
@@ -106,6 +110,7 @@ class Antenna:
             doi_bw = doi[2]
             doi_mle = self.calculate_MLE(doi_uv, doi_bw, complex_weights)
             mle_sum += doi_mle
+            print(doi_mle)
             mle.append(doi_mle)
         # sle = self.calculate_SLE(complex_weights, mle_sum)
         # islr = sle - mle_sum
@@ -121,13 +126,13 @@ class Antenna:
         #pylint: disable=unused-argument
         assert False, "update_tiling_plot() must be defined in child class."
 
-    def array_factor_single(self, complex_weights, u, v):
+    def radiated_power_single(self, complex_weights, u, v):
         #pylint: disable=unused-argument
-        assert False, "array_factor_single() must be defined in child class."
+        assert False, "radiated_power_single() must be defined in child class."
 
-    def array_factor(self, complex_weights):
+    def radiated_power(self, complex_weights):
         #pylint: disable=unused-argument
-        assert False, "array_factor() must be defined in child class."
+        assert False, "radiated_power() must be defined in child class."
 
 
 class RectangularPlanar(Antenna):
@@ -138,34 +143,34 @@ class RectangularPlanar(Antenna):
         self.spacing = spacing
         super().__init__(frequency, num_elements, parameters)
 
-    def array_factor(self, element_complex_weights):
-        """Calculate the array factor for the given complex weights, returned in spherical coordinates (theta, phi)"""
+    def radiated_power(self, element_complex_weights):
+        """Calculate the radiated_power for the given complex weights, returned in spherical coordinates (theta, phi)"""
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = np.zeros((self.samples, self.samples), dtype=complex)
+        electric_field = np.zeros((self.samples, self.samples), dtype=complex)
         for m in range(self.num_el_x):
             for n in range(self.num_el_y):
                 element = m * self.num_el_y + n
                 exponent = phases[element] + 1j * self.wavenumber * (
                     m * self.spacing[0] * self.u_grid + n * self.spacing[1] * self.v_grid
                 )
-                array_factor += weights[element] * np.exp(exponent)
-        array_factor = 10 * np.log10(np.abs(array_factor))
-        return array_factor
+                electric_field += weights[element] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power
 
-    def array_factor_single(self, element_complex_weights, u, v):
+    def radiated_power_single(self, element_complex_weights, u, v):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = 0 + 0j
+        electric_field = 0 + 0j
         for m in range(self.num_el_x):
             for n in range(self.num_el_y):
                 element = m * self.num_el_y + n
                 exponent = phases[element] + 1j * self.wavenumber * (
                     m * self.spacing[0] * u + n * self.spacing[1] * v
                 )
-                array_factor += weights[element] * np.exp(exponent)
-        array_factor = 10 * np.log10(np.abs(array_factor))
-        return array_factor
+                electric_field += weights[element] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
@@ -191,29 +196,29 @@ class UniformLinear(Antenna):
         self.spacing = spacing
         super().__init__(frequency, num_el, parameters)
 
-    def array_factor(self, element_complex_weights):
+    def radiated_power(self, element_complex_weights):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = np.zeros((self.samples, self.samples), dtype=complex)
+        electric_field = np.zeros((self.samples, self.samples), dtype=complex)
         for element in range(self.num_elements):
             exponent = phases[element] + (
                 1j * self.wavenumber * (element * self.spacing * self.u_grid)
             )
-            array_factor += weights[element] * np.exp(exponent)
-        array_factor = 10 * np.log10(np.abs(array_factor))
-        return array_factor
+            electric_field += weights[element] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power
 
-    def array_factor_single(self, element_complex_weights, u, v):
+    def radiated_power_single(self, element_complex_weights, u, v):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = 0 + 0j
+        electric_field = 0 + 0j
         for element in range(self.num_elements):
             exponent = phases[element] + (
                 1j * self.wavenumber * (element * self.spacing * u * v)
             )
-            array_factor += weights[element] * np.exp(exponent)
-        array_factor = 10 * np.log10(np.abs(array_factor))
-        return array_factor
+            electric_field += weights[element] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
@@ -235,10 +240,10 @@ class Circular(Antenna):
         self.radius = radius
         super().__init__(frequency, num_elements, parameters)
 
-    def array_factor(self, element_complex_weights):
+    def radiated_power(self, element_complex_weights):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = np.zeros((self.samples, self.samples), dtype=complex)
+        electric_field = np.zeros((self.samples, self.samples), dtype=complex)
         for k in range(self.num_elements):
             element_angle = 2 * np.pi * k / self.num_elements
             exponent = phases[k] + 1j * self.wavenumber * (
@@ -248,23 +253,23 @@ class Circular(Antenna):
                     + np.cos(element_angle) * self.v_grid
                 )
             )
-            array_factor += weights[k] * np.exp(exponent)
-        array_factor = 10 * np.log10(np.abs(array_factor))
-        return array_factor
+            electric_field += weights[k] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power
 
-    def array_factor_single(self, element_complex_weights, u, v):
+    def radiated_power_single(self, element_complex_weights, u, v):
         phases = np.angle(element_complex_weights)
         weights = np.abs(element_complex_weights)
-        array_factor = 0 + 0j
+        electric_field = 0 + 0j
         for k in range(self.num_elements):
             element_angle = 2 * np.pi * k / self.num_elements
             exponent = phases[k] + 1j * self.wavenumber * (
                 self.radius
                 * (np.sin(element_angle) * u + np.cos(element_angle) * v)
             )
-            array_factor += weights[k] * np.exp(exponent)
-        array_factor = 10 * np.log10(np.abs(array_factor))
-        return array_factor
+            electric_field += weights[k] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
