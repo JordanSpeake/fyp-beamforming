@@ -67,13 +67,19 @@ class Antenna:
             plt.pause(pause_time)
 
     def estimate_MLE_region(self, doi, bw):
+        """Estimate the region (by sample no.) required to calculate a DOI's MLE"""
         u_range = np.clip([doi[0] - bw, doi[0] + bw], -1, 1)
         v_range = np.clip([doi[1] - bw, doi[1] + bw], -1, 1)
         u_sample_range = np.rint(np.multiply(np.divide(np.add(u_range, 1), 2), (self.samples-1)))
         v_sample_range = np.rint(np.multiply(np.divide(np.add(v_range, 1), 2), (self.samples-1)))
+        u_samples = np.arange(int(u_sample_range[0]), int(u_sample_range[1]), step=1, dtype=int)
+        v_samples = np.arange(int(v_sample_range[0]), int(v_sample_range[1]), step=1, dtype=int)
+        return u_samples, v_samples
+
+
         return np.asarray(u_sample_range, dtype=int), np.asarray(v_sample_range, dtype=int)
 
-    def calculate_MLE(self, doi, beamwidth, complex_weights):
+    def calculate_MLE(self, doi, beamwidth, radiated_power):
         """Estimate the lobe energy at the given DOI, with the defined complex weights"""
         u_sample_range, v_sample_range = self.estimate_MLE_region(doi, beamwidth)
         integration_constant = np.power(1/self.samples, 2)
@@ -82,15 +88,14 @@ class Antenna:
             for v_sample in v_sample_range:
                 u = self.u_grid[0][u_sample]
                 v = self.v_grid[v_sample][0]
-                radiated_power = self.radiated_power_single(complex_weights, u, v)
+                radiated_power_sample = radiated_power[u_sample][v_sample]
                 w = np.sqrt(1 - np.power(u, 2) - np.power(v, 2))
-                accumulator += (radiated_power / np.abs(w))
+                accumulator += (radiated_power_sample / np.abs(w))
         mle = accumulator * integration_constant
         return mle
 
-    def calculate_SLE(self, complex_weights, mle_sum):
+    def calculate_SLE(self, mle_sum, radiated_power):
         """Estimates SLE as the total energy minus the sum of all MLEs. Rough estimate."""
-        radiated_power = self.radiated_power(complex_weights)
         integration_constant = np.power(1/self.samples, 2)
         w = 2 * np.pi / 3 # Estimate, w=2pi/3 when integrated over the unit disc, not correct but close enough.
         sle = (np.sum(radiated_power) * integration_constant / w) - mle_sum
@@ -102,15 +107,16 @@ class Antenna:
         sle - Sidelobe Energy
         islr - Integrated Sidelobe Ratio
         """
+        radiated_power = self.radiated_power(complex_weights)
         mle_sum = 0
         mle = []
         for doi in self.targets:
             doi_uv = bf_utils.spherical_to_uv(doi[0:2])
             doi_bw = doi[2]
-            doi_mle = self.calculate_MLE(doi_uv, doi_bw, complex_weights)
+            doi_mle = self.calculate_MLE(doi_uv, doi_bw, radiated_power)
             mle_sum += doi_mle
             mle.append(doi_mle)
-        sle = self.calculate_SLE(complex_weights, mle_sum)
+        sle = self.calculate_SLE(mle_sum, radiated_power)
         islr = sle/mle_sum
         if return_full_data:
             return islr, mle, mle_sum, sle

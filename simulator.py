@@ -5,6 +5,7 @@ import argparse
 import csv
 import datetime
 import os.path
+import cProfile
 
 try:
     import tomlib
@@ -170,7 +171,9 @@ def main():
                 write_results(result, file)
             print("Simulation results written successfully")
     else:
-        _ = bf.beamformer(antenna, parameters, logging, config_name)
+        with cProfile.Profile() as pr:
+            _ = bf.beamformer(antenna, parameters, logging, config_name)
+            pr.dump_stats('profile_dump')
     print("Done.")
 
 
