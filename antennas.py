@@ -1,6 +1,7 @@
 """Module containing class definitions of implemented antenna types"""
 
 import bf_utils
+import radiated_power_numba as rpn
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -143,20 +144,21 @@ class RectangularPlanar(Antenna):
         self.spacing = spacing
         super().__init__(frequency, num_elements, parameters)
 
-    def radiated_power(self, element_complex_weights):
+    def radiated_power(self, complex_weights):
         """Calculate the radiated_power for the given complex weights, returned in spherical coordinates (theta, phi)"""
-        phases = np.angle(element_complex_weights)
-        weights = np.abs(element_complex_weights)
-        electric_field = np.zeros((self.samples, self.samples), dtype=complex)
-        for m in range(self.num_el_x):
-            for n in range(self.num_el_y):
-                element = m * self.num_el_y + n
-                exponent = phases[element] + 1j * self.wavenumber * (
-                    m * self.spacing[0] * self.u_grid + n * self.spacing[1] * self.v_grid
-                )
-                electric_field += weights[element] * np.exp(exponent)
-        radiated_power = np.power(np.abs(electric_field), 2)
-        return radiated_power
+        # phases = np.angle(element_complex_weights)
+        # weights = np.abs(element_complex_weights)
+        # electric_field = np.zeros((self.samples, self.samples), dtype=complex)
+        # for m in range(self.num_el_x):
+        #     for n in range(self.num_el_y):
+        #         element = m * self.num_el_y + n
+        #         exponent = phases[element] + 1j * self.wavenumber * (
+        #             m * self.spacing[0] * self.u_grid + n * self.spacing[1] * self.v_grid
+        #         )
+        #         electric_field += weights[element] * np.exp(exponent)
+        # radiated_power = np.power(np.abs(electric_field), 2)
+        # return radiated_power
+        return rpn.rpa_radiated_power(complex_weights, np.zeros((self.samples, self.samples), dtype=complex), self.u_grid, self.v_grid, self.num_el_x, self.num_el_y, self.wavenumber, self.spacing)
 
     def radiated_power_single(self, element_complex_weights, u, v):
         phases = np.angle(element_complex_weights)
@@ -195,6 +197,7 @@ class UniformLinear(Antenna):
     def __init__(self, frequency: float, spacing: float, num_el: int, parameters):
         self.spacing = spacing
         super().__init__(frequency, num_el, parameters)
+
 
     def radiated_power(self, element_complex_weights):
         phases = np.angle(element_complex_weights)
