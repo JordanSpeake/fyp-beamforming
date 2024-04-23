@@ -41,6 +41,8 @@ class Parameters:
         neighbourhood_size,
         num_tiles,
         phase_bit_depth,
+        elitism_count,
+        elitism_replacement_chance,
     ):
         self.population_size = population_size
         self.cognitive_coeff = cognitive_coeff
@@ -54,3 +56,5 @@ class Parameters:
         self.phase_bit_depth = phase_bit_depth
         self.samples = samples
         self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
+        self.elitism_count = elitism_count
+        self.elitism_replacement_chance = elitism_count

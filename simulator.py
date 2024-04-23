@@ -82,6 +82,8 @@ def parse_parameters_config(data):
             neighbourhood_size=data["neighbourhood_size"],
             num_tiles=data["num_tiles"],
             phase_bit_depth=data["phase_bit_depth"],
+            elitism_count=data["elitism_count"],
+            elitism_replacement_chance=data["elitism_replacement_chance"],
         )
     except KeyError as e:
         print(f"Failed to parse parameters config: {e}")

@@ -112,9 +112,6 @@ class Antenna:
             mle.append(doi_mle)
         sle = self.calculate_SLE(complex_weights, mle_sum)
         islr = sle/mle_sum
-        # print(f"MLEs: {mle}")
-        # print(f"SLR: {sle}")
-        # print(f"ISLR: {islr}")
         if return_full_data:
             return islr, mle, mle_sum, sle
         return 1/islr
