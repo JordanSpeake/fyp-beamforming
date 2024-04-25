@@ -127,10 +127,6 @@ class Antenna:
         #pylint: disable=unused-argument
         assert False, "update_tiling_plot() must be defined in child class."
 
-    def radiated_power_single(self, complex_weights, u, v):
-        #pylint: disable=unused-argument
-        assert False, "radiated_power_single() must be defined in child class."
-
     def radiated_power(self, complex_weights):
         #pylint: disable=unused-argument
         assert False, "radiated_power() must be defined in child class."
@@ -146,33 +142,7 @@ class RectangularPlanar(Antenna):
 
     def radiated_power(self, complex_weights):
         """Calculate the radiated_power for the given complex weights, returned in spherical coordinates (theta, phi)"""
-        # phases = np.angle(element_complex_weights)
-        # weights = np.abs(element_complex_weights)
-        # electric_field = np.zeros((self.samples, self.samples), dtype=complex)
-        # for m in range(self.num_el_x):
-        #     for n in range(self.num_el_y):
-        #         element = m * self.num_el_y + n
-        #         exponent = phases[element] + 1j * self.wavenumber * (
-        #             m * self.spacing[0] * self.u_grid + n * self.spacing[1] * self.v_grid
-        #         )
-        #         electric_field += weights[element] * np.exp(exponent)
-        # radiated_power = np.power(np.abs(electric_field), 2)
-        # return radiated_power
         return rpn.rpa_radiated_power(complex_weights, np.zeros((self.samples, self.samples), dtype=complex), self.u_grid, self.v_grid, self.num_el_x, self.num_el_y, self.wavenumber, self.spacing)
-
-    def radiated_power_single(self, element_complex_weights, u, v):
-        phases = np.angle(element_complex_weights)
-        weights = np.abs(element_complex_weights)
-        electric_field = 0 + 0j
-        for m in range(self.num_el_x):
-            for n in range(self.num_el_y):
-                element = m * self.num_el_y + n
-                exponent = phases[element] + 1j * self.wavenumber * (
-                    m * self.spacing[0] * u + n * self.spacing[1] * v
-                )
-                electric_field += weights[element] * np.exp(exponent)
-        radiated_power = np.power(np.abs(electric_field), 2)
-        return radiated_power
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
@@ -211,18 +181,6 @@ class UniformLinear(Antenna):
         radiated_power = np.power(np.abs(electric_field), 2)
         return radiated_power
 
-    def radiated_power_single(self, element_complex_weights, u, v):
-        phases = np.angle(element_complex_weights)
-        weights = np.abs(element_complex_weights)
-        electric_field = 0 + 0j
-        for element in range(self.num_elements):
-            exponent = phases[element] + (
-                1j * self.wavenumber * (element * self.spacing * u * v)
-            )
-            electric_field += weights[element] * np.exp(exponent)
-        radiated_power = np.power(np.abs(electric_field), 2)
-        return radiated_power
-
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
         self.ax_tile_pattern.set_xticks(
@@ -255,20 +213,6 @@ class Circular(Antenna):
                     np.sin(element_angle) * self.u_grid
                     + np.cos(element_angle) * self.v_grid
                 )
-            )
-            electric_field += weights[k] * np.exp(exponent)
-        radiated_power = np.power(np.abs(electric_field), 2)
-        return radiated_power
-
-    def radiated_power_single(self, element_complex_weights, u, v):
-        phases = np.angle(element_complex_weights)
-        weights = np.abs(element_complex_weights)
-        electric_field = 0 + 0j
-        for k in range(self.num_elements):
-            element_angle = 2 * np.pi * k / self.num_elements
-            exponent = phases[k] + 1j * self.wavenumber * (
-                self.radius
-                * (np.sin(element_angle) * u + np.cos(element_angle) * v)
             )
             electric_field += weights[k] * np.exp(exponent)
         radiated_power = np.power(np.abs(electric_field), 2)
