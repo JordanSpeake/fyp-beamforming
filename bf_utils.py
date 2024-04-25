@@ -2,6 +2,7 @@ import numpy as np
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 
+
 def random_complex(size):
     """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
     return np.sqrt(np.random.uniform(0, 1, size)) * np.exp(
@@ -10,12 +11,12 @@ def random_complex(size):
 
 
 def spherical_to_uv(spherical_coords):
-        """Convert [theta, phi] to [u, v]. From spherical to directional cosine coordinates."""
-        theta = spherical_coords[0]
-        phi = spherical_coords[1]
-        u = np.sin(theta) * np.cos(phi)
-        v = np.sin(theta) * np.sin(phi)
-        return np.asarray([u, v])
+    """Convert [theta, phi] to [u, v]. From spherical to directional cosine coordinates."""
+    theta = spherical_coords[0]
+    phi = spherical_coords[1]
+    u = np.sin(theta) * np.cos(phi)
+    v = np.sin(theta) * np.sin(phi)
+    return np.asarray([u, v])
 
 
 @dataclass
@@ -55,6 +56,8 @@ class Parameters:
         self.num_tiles = num_tiles
         self.phase_bit_depth = phase_bit_depth
         self.samples = samples
-        self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
+        self.u_grid, self.v_grid = np.meshgrid(
+            np.linspace(-1, 1, samples), np.linspace(-1, 1, samples)
+        )
         self.elitism_count = elitism_count
         self.elitism_replacement_chance = elitism_count

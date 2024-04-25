@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 import bf_utils
 
+
 class Particle:
     def __init__(self, antenna, parameters, uniform=False):
         if uniform:
@@ -38,12 +39,12 @@ class Population:
 
         self.elitism_count = parameters.elitism_count
         self.elitism_replacement_chance = parameters.elitism_replacement_chance
-        self.best_particles = self.population[0:self.elitism_count]
+        self.best_particles = self.population[0 : self.elitism_count]
 
     def quantize_phase(self, phase):
         bits = np.power(2, self.phase_bit_depth)
         quantisation_step = int((phase / 2 * np.pi) * bits)
-        phase = quantisation_step  * 2 * np.pi / bits
+        phase = quantisation_step * 2 * np.pi / bits
         return phase
 
     def update_velocity(self, particle):
@@ -88,7 +89,8 @@ class Population:
     def generate_best_particle_list(self):
         best_particles = []
         for particle in self.population:
-            if len(best_particles) == 0: best_particles.append(particle)
+            if len(best_particles) == 0:
+                best_particles.append(particle)
             elif len(best_particles) < self.elitism_count:
                 for index, particle_in_list in enumerate(best_particles):
                     if particle.score > particle_in_list.score:
@@ -125,8 +127,8 @@ class Population:
         return best_particle_index
 
     def update_best_neighbours(self):
-            for index, particle in enumerate(self.population):
-                particle.best_neighbour = self.population[self.best_neighbour_index(index)]
+        for index, particle in enumerate(self.population):
+            particle.best_neighbour = self.population[self.best_neighbour_index(index)]
 
     def repopulate_with_elitism(self):
         """Replace a random selection of low-scoring particles with high scoring particles"""
@@ -135,7 +137,11 @@ class Population:
                 if np.random.rand() < self.elitism_replacement_chance:
                     new_particle_index = np.random.randint(0, self.elitism_count)
                     particle.position = self.best_particles[new_particle_index].position
-                    particle.velocity = self.best_particles[new_particle_index].velocity + (self.inertia_weight * bf_utils.random_complex(self.num_elements))
+                    particle.velocity = self.best_particles[
+                        new_particle_index
+                    ].velocity + (
+                        self.inertia_weight * bf_utils.random_complex(self.num_elements)
+                    )
 
     def step(self):
         """Take a single step in the simulation, update all particles once."""
@@ -151,17 +157,19 @@ class PSO:
         self.antenna = antenna
         self.parameters = parameters
         self.logging = logging
-        self.population = Population(self.antenna, self.parameters, uniform=self.logging.use_uniform_particle)
+        self.population = Population(
+            self.antenna, self.parameters, uniform=self.logging.use_uniform_particle
+        )
         self.result = []
 
     def update_results(self):
-            self.result.append(
-        {
-            "Position" : self.population.best_particles[0].position,
-            "Tiled Position" : self.population.best_particles[0].tiled_position,
-            "Score" : self.population.best_particles[0].score,
-        }
-    )
+        self.result.append(
+            {
+                "Position": self.population.best_particles[0].position,
+                "Tiled Position": self.population.best_particles[0].tiled_position,
+                "Score": self.population.best_particles[0].score,
+            }
+        )
 
     def run(self):
         for step_counter in range(self.parameters.max_steps):

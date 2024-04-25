@@ -33,7 +33,7 @@ def read_config(path_to_config):
             "antenna": antenna,
             "parameters": parameters,
             "logging": logging,
-            "config_name" : os.path.basename(path_to_config)
+            "config_name": os.path.basename(path_to_config),
         }
 
 
@@ -129,7 +129,6 @@ def get_output_path(config_name):
     return output_path
 
 
-
 def generate_simulator_setup():
     """Generate the required classes for running the simulation"""
     parser = argparse.ArgumentParser()
@@ -173,7 +172,7 @@ def main():
     else:
         with cProfile.Profile() as pr:
             _ = bf.beamformer(antenna, parameters, logging, config_name)
-            pr.dump_stats('import_debug_profile_dump')
+            pr.dump_stats("import_debug_profile_dump")
     print("Done.")
 
 

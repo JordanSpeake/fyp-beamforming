@@ -8,8 +8,10 @@ import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 
+
 class Antenna:
     """Base class for all antennas"""
+
     def __init__(self, frequency, num_elements, parameters):
         self.frequency = frequency
         wavelength = 3e9 / frequency
@@ -27,11 +29,13 @@ class Antenna:
 
     def update_array_factor_axis(self, axis, array_factor):
         """Reset and clear axes for the next step's data output to be plotted"""
-        unit_circle = patches.Circle((0, 0), 1, color='k', fill=False)
+        unit_circle = patches.Circle((0, 0), 1, color="k", fill=False)
         axis.clear()
         axis.set_xlabel("U")
         axis.set_ylabel("V")
-        axis.imshow(array_factor, cmap='seismic', interpolation='nearest', extent=[-1, 1, -1, 1])
+        axis.imshow(
+            array_factor, cmap="seismic", interpolation="nearest", extent=[-1, 1, -1, 1]
+        )
         axis.add_patch(unit_circle)
 
     def add_doi_indicators(self):
@@ -40,7 +44,9 @@ class Antenna:
         for target in self.targets:
             pos = bf_utils.spherical_to_uv(target)
             for axis in axes:
-                axis.add_patch(patches.Circle((pos[0], pos[1]), 0.05, color='k', fill=False))
+                axis.add_patch(
+                    patches.Circle((pos[0], pos[1]), 0.05, color="k", fill=False)
+                )
 
     def display(
         self,
@@ -70,19 +76,28 @@ class Antenna:
         """Estimate the region (by sample no.) required to calculate a DOI's MLE"""
         u_range = np.clip([doi[0] - bw, doi[0] + bw], -1, 1)
         v_range = np.clip([doi[1] - bw, doi[1] + bw], -1, 1)
-        u_sample_range = np.rint(np.multiply(np.divide(np.add(u_range, 1), 2), (self.samples-1)))
-        v_sample_range = np.rint(np.multiply(np.divide(np.add(v_range, 1), 2), (self.samples-1)))
-        u_samples = np.arange(int(u_sample_range[0]), int(u_sample_range[1]), step=1, dtype=int)
-        v_samples = np.arange(int(v_sample_range[0]), int(v_sample_range[1]), step=1, dtype=int)
+        u_sample_range = np.rint(
+            np.multiply(np.divide(np.add(u_range, 1), 2), (self.samples - 1))
+        )
+        v_sample_range = np.rint(
+            np.multiply(np.divide(np.add(v_range, 1), 2), (self.samples - 1))
+        )
+        u_samples = np.arange(
+            int(u_sample_range[0]), int(u_sample_range[1]), step=1, dtype=int
+        )
+        v_samples = np.arange(
+            int(v_sample_range[0]), int(v_sample_range[1]), step=1, dtype=int
+        )
         return u_samples, v_samples
 
-
-        return np.asarray(u_sample_range, dtype=int), np.asarray(v_sample_range, dtype=int)
+        return np.asarray(u_sample_range, dtype=int), np.asarray(
+            v_sample_range, dtype=int
+        )
 
     def calculate_MLE(self, doi, beamwidth, radiated_power):
         """Estimate the lobe energy at the given DOI, with the defined complex weights"""
         u_sample_range, v_sample_range = self.estimate_MLE_region(doi, beamwidth)
-        integration_constant = np.power(1/self.samples, 2)
+        integration_constant = np.power(1 / self.samples, 2)
         accumulator = 0
         for u_sample in u_sample_range:
             for v_sample in v_sample_range:
@@ -90,14 +105,16 @@ class Antenna:
                 v = self.v_grid[v_sample][0]
                 radiated_power_sample = radiated_power[u_sample][v_sample]
                 w = np.sqrt(1 - np.power(u, 2) - np.power(v, 2))
-                accumulator += (radiated_power_sample / np.abs(w))
+                accumulator += radiated_power_sample / np.abs(w)
         mle = accumulator * integration_constant
         return mle
 
     def calculate_SLE(self, mle_sum, radiated_power):
         """Estimates SLE as the total energy minus the sum of all MLEs. Rough estimate."""
-        integration_constant = np.power(1/self.samples, 2)
-        w = 2 * np.pi / 3 # Estimate, w=2pi/3 when integrated over the unit disc, not correct but close enough.
+        integration_constant = np.power(1 / self.samples, 2)
+        w = (
+            2 * np.pi / 3
+        )  # Estimate, w=2pi/3 when integrated over the unit disc, not correct but close enough.
         sle = (np.sum(radiated_power) * integration_constant / w) - mle_sum
         return sle
 
@@ -117,19 +134,19 @@ class Antenna:
             mle_sum += doi_mle
             mle.append(doi_mle)
         sle = self.calculate_SLE(mle_sum, radiated_power)
-        islr = sle/mle_sum
+        islr = sle / mle_sum
         if return_full_data:
             return islr, mle, mle_sum, sle
-        return 1/islr
+        return 1 / islr
 
     def update_tiling_plot(self, tile_labels):
         """Update the tiling display subplot"""
-        #pylint: disable=unused-argument
+        # pylint: disable=unused-argument
         assert False, "update_tiling_plot() must be defined in child class."
 
     def radiated_power(self, complex_weights):
         """Calculate the radiated_power for the given complex weights, returned in spherical coordinates (theta, phi)"""
-        #pylint: disable=unused-argument
+        # pylint: disable=unused-argument
         assert False, "radiated_power() must be defined in child class."
 
 
@@ -142,8 +159,19 @@ class RectangularPlanar(Antenna):
         super().__init__(frequency, num_elements, parameters)
 
     def radiated_power(self, complex_weights):
-        electric_field_preallocated = np.zeros((self.samples, self.samples), dtype=complex)
-        return rpn.rpa_radiated_power(complex_weights, electric_field_preallocated, self.u_grid, self.v_grid, self.num_el_x, self.num_el_y, self.wavenumber, self.spacing)
+        electric_field_preallocated = np.zeros(
+            (self.samples, self.samples), dtype=complex
+        )
+        return rpn.rpa_radiated_power(
+            complex_weights,
+            electric_field_preallocated,
+            self.u_grid,
+            self.v_grid,
+            self.num_el_x,
+            self.num_el_y,
+            self.wavenumber,
+            self.spacing,
+        )
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
@@ -170,8 +198,17 @@ class UniformLinear(Antenna):
         super().__init__(frequency, num_el, parameters)
 
     def radiated_power(self, complex_weights):
-        electric_field_preallocated = np.zeros((self.samples, self.samples), dtype=complex)
-        return rpn.ula_radiated_power(complex_weights, electric_field_preallocated, self.num_elements, self.wavenumber, self.spacing, self.u_grid)
+        electric_field_preallocated = np.zeros(
+            (self.samples, self.samples), dtype=complex
+        )
+        return rpn.ula_radiated_power(
+            complex_weights,
+            electric_field_preallocated,
+            self.num_elements,
+            self.wavenumber,
+            self.spacing,
+            self.u_grid,
+        )
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
@@ -194,8 +231,18 @@ class Circular(Antenna):
         super().__init__(frequency, num_elements, parameters)
 
     def radiated_power(self, complex_weights):
-        electric_field_preallocated = np.zeros((self.samples, self.samples), dtype=complex)
-        return rpn.ca_radiated_power(complex_weights, electric_field_preallocated, self.num_elements, self.radius, self.wavenumber, self.u_grid, self.v_grid)
+        electric_field_preallocated = np.zeros(
+            (self.samples, self.samples), dtype=complex
+        )
+        return rpn.ca_radiated_power(
+            complex_weights,
+            electric_field_preallocated,
+            self.num_elements,
+            self.radius,
+            self.wavenumber,
+            self.u_grid,
+            self.v_grid,
+        )
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
