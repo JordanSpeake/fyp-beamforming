@@ -173,7 +173,7 @@ def main():
     else:
         with cProfile.Profile() as pr:
             _ = bf.beamformer(antenna, parameters, logging, config_name)
-            pr.dump_stats('numba_test_profile_dump')
+            pr.dump_stats('import_debug_profile_dump')
     print("Done.")
 
 

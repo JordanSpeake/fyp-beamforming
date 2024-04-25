@@ -190,8 +190,8 @@ def beamformer(antenna, parameters, logging, config_name):
         print("Done.")
     if logging.show_plots:
         antenna.display(
-            result[-1]["best_position_history"],
-            result[-1]["best_tiled_position_history"],
+            result[-1]["Position"],
+            result[-1]["Tiled Position"],
             persist=logging.plots_persist,
         )
     return result

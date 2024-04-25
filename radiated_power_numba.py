@@ -16,3 +16,16 @@ def rpa_radiated_power(complex_weights, electric_field_preallocated, u_grid, v_g
             electric_field += weights[element] * np.exp(exponent)
     radiated_power = np.power(np.abs(electric_field), 2)
     return radiated_power
+
+@jit
+def ula_radiated_power(complex_weights, electric_field_preallocated, num_elements, wavenumber, spacing, u_grid):
+        phases = np.angle(complex_weights)
+        weights = np.abs(complex_weights)
+        electric_field = electric_field_preallocated
+        for element in range(num_elements):
+            exponent = phases[element] + (
+                1j * wavenumber * (element * spacing * u_grid)
+            )
+            electric_field += weights[element] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power

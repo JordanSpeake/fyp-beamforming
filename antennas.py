@@ -142,7 +142,8 @@ class RectangularPlanar(Antenna):
 
     def radiated_power(self, complex_weights):
         """Calculate the radiated_power for the given complex weights, returned in spherical coordinates (theta, phi)"""
-        return rpn.rpa_radiated_power(complex_weights, np.zeros((self.samples, self.samples), dtype=complex), self.u_grid, self.v_grid, self.num_el_x, self.num_el_y, self.wavenumber, self.spacing)
+        electric_field_preallocated = np.zeros((self.samples, self.samples), dtype=complex)
+        return rpn.rpa_radiated_power(complex_weights, electric_field_preallocated, self.u_grid, self.v_grid, self.num_el_x, self.num_el_y, self.wavenumber, self.spacing)
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
@@ -168,18 +169,9 @@ class UniformLinear(Antenna):
         self.spacing = spacing
         super().__init__(frequency, num_el, parameters)
 
-
-    def radiated_power(self, element_complex_weights):
-        phases = np.angle(element_complex_weights)
-        weights = np.abs(element_complex_weights)
-        electric_field = np.zeros((self.samples, self.samples), dtype=complex)
-        for element in range(self.num_elements):
-            exponent = phases[element] + (
-                1j * self.wavenumber * (element * self.spacing * self.u_grid)
-            )
-            electric_field += weights[element] * np.exp(exponent)
-        radiated_power = np.power(np.abs(electric_field), 2)
-        return radiated_power
+    def radiated_power(self, complex_weights):
+        electric_field_preallocated = np.zeros((self.samples, self.samples), dtype=complex)
+        return rpn.ula_radiated_power(complex_weights, electric_field_preallocated, self.num_elements, self.wavenumber, self.spacing, self.u_grid)
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
