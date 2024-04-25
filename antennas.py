@@ -39,7 +39,6 @@ class Antenna:
         axes = [self.ax_tiled, self.ax_untiled]
         for target in self.targets:
             pos = bf_utils.spherical_to_uv(target)
-            print(pos)
             for axis in axes:
                 axis.add_patch(patches.Circle((pos[0], pos[1]), 0.05, color='k', fill=False))
 
@@ -124,10 +123,12 @@ class Antenna:
         return 1/islr
 
     def update_tiling_plot(self, tile_labels):
+        """Update the tiling display subplot"""
         #pylint: disable=unused-argument
         assert False, "update_tiling_plot() must be defined in child class."
 
     def radiated_power(self, complex_weights):
+        """Calculate the radiated_power for the given complex weights, returned in spherical coordinates (theta, phi)"""
         #pylint: disable=unused-argument
         assert False, "radiated_power() must be defined in child class."
 
@@ -141,7 +142,6 @@ class RectangularPlanar(Antenna):
         super().__init__(frequency, num_elements, parameters)
 
     def radiated_power(self, complex_weights):
-        """Calculate the radiated_power for the given complex weights, returned in spherical coordinates (theta, phi)"""
         electric_field_preallocated = np.zeros((self.samples, self.samples), dtype=complex)
         return rpn.rpa_radiated_power(complex_weights, electric_field_preallocated, self.u_grid, self.v_grid, self.num_el_x, self.num_el_y, self.wavenumber, self.spacing)
 
@@ -193,22 +193,9 @@ class Circular(Antenna):
         self.radius = radius
         super().__init__(frequency, num_elements, parameters)
 
-    def radiated_power(self, element_complex_weights):
-        phases = np.angle(element_complex_weights)
-        weights = np.abs(element_complex_weights)
-        electric_field = np.zeros((self.samples, self.samples), dtype=complex)
-        for k in range(self.num_elements):
-            element_angle = 2 * np.pi * k / self.num_elements
-            exponent = phases[k] + 1j * self.wavenumber * (
-                self.radius
-                * (
-                    np.sin(element_angle) * self.u_grid
-                    + np.cos(element_angle) * self.v_grid
-                )
-            )
-            electric_field += weights[k] * np.exp(exponent)
-        radiated_power = np.power(np.abs(electric_field), 2)
-        return radiated_power
+    def radiated_power(self, complex_weights):
+        electric_field_preallocated = np.zeros((self.samples, self.samples), dtype=complex)
+        return rpn.ca_radiated_power(complex_weights, electric_field_preallocated, self.num_elements, self.radius, self.wavenumber, self.u_grid, self.v_grid)
 
     def update_tiling_plot(self, tile_labels):
         self.ax_tile_pattern.clear()
