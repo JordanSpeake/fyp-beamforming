@@ -54,17 +54,18 @@ class Population:
     def update_velocity(self, particle):
         """Set and limit velocity of particle to max_particle_velocity and wrap direction [0, 2pi]"""
         inertial_component = self.inertia_weight * particle.velocity
-        cognitive_component = (
-            self.cognitive_coeff
-            * bf_utils.random_complex(self.num_elements)
-            * (np.subtract(particle.best_position, particle.position))
-        )
+        # cognitive_component = (
+        #     self.cognitive_coeff
+        #     * bf_utils.random_complex(self.num_elements)
+        #     * (np.subtract(particle.best_position, particle.position))
+        # )
         social_component = (
             self.social_coeff
             * bf_utils.random_complex(self.num_elements)
             * (np.subtract(particle.best_neighbour.position, particle.position))
         )
-        velocity = inertial_component + cognitive_component + social_component
+        # velocity = inertial_component + cognitive_component + social_component
+        velocity = inertial_component + social_component
         speed = np.clip(np.abs(velocity), 0, self.max_velocity)
         direction = np.mod(np.angle(velocity), 2 * np.pi)
         particle.velocity = speed * np.exp(1j * direction)
@@ -113,8 +114,11 @@ class Population:
         """Move the particle to the next position, then update it's score based on the provided fitness function"""
         self.update_velocity(particle)
         self.update_position(particle)
-        self.generate_tiling(particle)
-        islr, mle, mle_sum, sle = self.fitness_function(particle.tiled_position)
+        if self.clusters < 1: # if the number of tiles is set to 0 or less, don't do element tiling.
+            islr, mle, mle_sum, sle = self.fitness_function(particle.position)
+        else:
+            self.generate_tiling(particle)
+            islr, mle, mle_sum, sle = self.fitness_function(particle.tiled_position)
         particle.score = 1/islr
         particle.islr = islr
         particle.mle = mle
@@ -147,11 +151,7 @@ class Population:
                 if np.random.rand() < self.elitism_replacement_chance:
                     new_particle_index = np.random.randint(0, self.elitism_count)
                     particle.position = self.best_particles[new_particle_index].position
-                    particle.velocity = self.best_particles[
-                        new_particle_index
-                    ].velocity + (
-                        self.inertia_weight * bf_utils.random_complex(self.num_elements)
-                    )
+                    particle.velocity = 0.25 * bf_utils.random_complex(self.num_elements) # add a small, random velocity
 
     def step(self):
         """Take a single step in the simulation, update all particles once."""
@@ -194,6 +194,7 @@ class PSO:
                 print(
                     f"Position: {self.population.best_particles[0].position}\n Score: {self.population.best_particles[0].score}"
                 )
+                print(f"ISLR: {self.population.best_particles[0].islr} \n SLE: {self.population.best_particles[0].sle}\n MLEs: {self.population.best_particles[0].mle}")
             if self.logging.show_plots:
                 self.antenna.display(
                     self.population.best_particles[0].position,

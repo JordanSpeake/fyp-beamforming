@@ -14,8 +14,11 @@ class Antenna:
 
     def __init__(self, frequency, num_elements, parameters):
         self.frequency = frequency
-        wavelength = 3e9 / frequency
+        wavelength = 3e8 / frequency
         self.wavenumber = 2 * np.pi / wavelength
+        print(f"Frequency: {self.frequency}")
+        print(f"Wavelength: {wavelength}")
+        print(f"Wavenumber: {self.wavenumber}")
         self.num_elements = num_elements
         self.samples = parameters.samples
         self.u_grid = parameters.u_grid
@@ -45,7 +48,7 @@ class Antenna:
             pos = bf_utils.spherical_to_uv(target)
             for axis in axes:
                 axis.add_patch(
-                    patches.Circle((pos[0], pos[1]), 0.05, color="k", fill=False)
+                    patches.Circle((pos[0], pos[1]), target[2], color="k", fill=False)
                 )
 
     def display(

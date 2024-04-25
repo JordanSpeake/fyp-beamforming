@@ -2,7 +2,6 @@ import numpy as np
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 
-
 def random_complex(size):
     """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
     return np.sqrt(np.random.uniform(0, 1, size)) * np.exp(
@@ -56,8 +55,6 @@ class Parameters:
         self.num_tiles = num_tiles
         self.phase_bit_depth = phase_bit_depth
         self.samples = samples
-        self.u_grid, self.v_grid = np.meshgrid(
-            np.linspace(-1, 1, samples), np.linspace(-1, 1, samples)
-        )
+        self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
         self.elitism_count = elitism_count
         self.elitism_replacement_chance = elitism_count
