@@ -70,8 +70,9 @@ class Population:
         position = np.add(particle.position, particle.velocity)
         weights = np.clip(np.abs(position), 0, 1)
         phases = np.mod(np.angle(position), 2 * np.pi)
-        for index, phase in enumerate(phases):
-            phases[index] = self.quantize_phase(phase)
+        if self.phase_bit_depth > 0:
+            for index, phase in enumerate(phases):
+                phases[index] = self.quantize_phase(phase)
         particle.position = weights * np.exp(1j * phases)
 
     def generate_tiling(self, particle):
