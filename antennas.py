@@ -90,10 +90,6 @@ class Antenna:
         )
         return u_samples, v_samples
 
-        return np.asarray(u_sample_range, dtype=int), np.asarray(
-            v_sample_range, dtype=int
-        )
-
     def calculate_MLE(self, doi, beamwidth, radiated_power):
         """Estimate the lobe energy at the given DOI, with the defined complex weights"""
         u_sample_range, v_sample_range = self.estimate_MLE_region(doi, beamwidth)
@@ -118,7 +114,7 @@ class Antenna:
         sle = (np.sum(radiated_power) * integration_constant / w) - mle_sum
         return sle
 
-    def fitness(self, complex_weights, return_full_data=False):
+    def fitness(self, complex_weights):
         """Return the islr, and optionally other data, of a given set of complex weights
         mle - Main Lobe Energy
         sle - Sidelobe Energy
@@ -135,9 +131,7 @@ class Antenna:
             mle.append(doi_mle)
         sle = self.calculate_SLE(mle_sum, radiated_power)
         islr = sle / mle_sum
-        if return_full_data:
-            return islr, mle, mle_sum, sle
-        return 1 / islr
+        return islr, mle, mle_sum, sle
 
     def update_tiling_plot(self, tile_labels):
         """Update the tiling display subplot"""

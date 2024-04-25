@@ -163,12 +163,11 @@ def main():
         with open(output_path, "w", newline="", encoding="utf-8") as file:
             try:
                 result = bf.beamformer(antenna, parameters, logging, config_name)
-                result.append()
             except Exception as e:
                 print(f"Simulation cancelled, error in beamformer.py: {e}")
             else:
                 write_results(result, file)
-            print("Simulation results written successfully")
+                print("Simulation results written successfully")
     else:
         with cProfile.Profile() as pr:
             _ = bf.beamformer(antenna, parameters, logging, config_name)

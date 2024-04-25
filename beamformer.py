@@ -16,6 +16,10 @@ class Particle:
         self.tile_labels = np.zeros(antenna.num_elements, dtype=int)
         self.tile_values = np.zeros(parameters.num_tiles, dtype=complex)
         self.tiled_position = np.zeros(antenna.num_elements, dtype=complex)
+        self.islr = None
+        self.mle = []
+        self.mle_sum = None
+        self.sle = None
         self.score = float("-inf")
         self.best_score = self.score
 
@@ -105,12 +109,17 @@ class Population:
                         self.best_particles.insert(index, particle)
                         break
 
-    def update_particle(self, particle, fitness_function):
+    def update_particle(self, particle):
         """Move the particle to the next position, then update it's score based on the provided fitness function"""
         self.update_velocity(particle)
         self.update_position(particle)
         self.generate_tiling(particle)
-        particle.score = fitness_function(particle.tiled_position)
+        islr, mle, mle_sum, sle = self.fitness_function(particle.tiled_position)
+        particle.score = 1/islr
+        particle.islr = islr
+        particle.mle = mle
+        particle.mle_sum = mle_sum
+        particle.sle = sle
 
     def best_neighbour_index(self, index):
         """Find the best scoring particle in the neighbourhood (by particle index) of a given particle"""
@@ -148,7 +157,7 @@ class Population:
         """Take a single step in the simulation, update all particles once."""
         self.update_best_neighbours()
         for particle in self.population:
-            self.update_particle(particle, self.fitness_function)
+            self.update_particle(particle)
         self.generate_best_particle_list()
         self.repopulate_with_elitism()
 
@@ -166,9 +175,13 @@ class PSO:
     def update_results(self):
         self.result.append(
             {
-                "Position": self.population.best_particles[0].position,
-                "Tiled Position": self.population.best_particles[0].tiled_position,
-                "Score": self.population.best_particles[0].score,
+                "position": self.population.best_particles[0].position,
+                "tiled_position": self.population.best_particles[0].tiled_position,
+                "score": self.population.best_particles[0].score,
+                "islr" : self.population.best_particles[0].islr,
+                "mle_sum" : self.population.best_particles[0].mle_sum,
+                "mle" : self.population.best_particles[0].mle,
+                "sle" : self.population.best_particles[0].sle,
             }
         )
 
@@ -197,10 +210,10 @@ def beamformer(antenna, parameters, logging, config_name):
     result = particle_swamp_optimiser.run()
     if logging.verbose:
         print("Done.")
-    if logging.show_plots:
+    if logging.show_plots and logging.plots_persist:
         antenna.display(
-            result[-1]["Position"],
-            result[-1]["Tiled Position"],
-            persist=logging.plots_persist,
+            result[-1]["position"],
+            result[-1]["tiled_position"],
+            persist=True,
         )
     return result
