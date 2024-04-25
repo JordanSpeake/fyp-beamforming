@@ -1,0 +1,31 @@
+# First, define the antenna used for the simulation.
+[antenna]
+type = "RectangularPlanar"
+frequency = 30e9
+spacing = [0.05, 0.05]
+num_elements = [8, 8]
+
+#Parameters for the simulation itself are then defined.
+[parameters]
+phase_bit_depth = 8 # Bit depth of the phase shifter, set to 0 to disable.
+samples = 180 # number of angular samples per dimension for radiated power calculation
+population_size = 10 # Number of particles in the PSO algorithm
+cognitive_coeff = 0.5
+social_coeff = 0.25
+inertia_weight = 0.5
+max_particle_velocity = 0.2
+elitism_count = 3 # number of top-scoring particles used to randomly replace other particles
+elitism_replacement_chance = 0.1
+max_steps = 50
+static_targets = [ [0.0, 0.0, 0.02] ] # format: [theta, phi, beamwidth], in directional cosine coordinates.
+neighbourhood_size = 10 # Number of particles that a single particle "knows" about
+num_tiles = 4 # The number of groups to cluster complex weights into
+
+# Logging parameters can then be set, defining how the program outputs information.
+[logging]
+show_plots = true # Whether beam patterns are displayed on-screen during the run.
+plots_persist = false # At the end of the simulation run, whether the final beam patterns are left displayed on-screen.
+verbose = true # Whether the system prints it's progress to the terminal.
+write_results = false # Whether the system writes the generated data to a CSV or not.
+use_uniform_particle = false # For debugging - Forces the PSO to only use complex weights value [1+0j].
+debug= true # Deprecated, TODO remove
