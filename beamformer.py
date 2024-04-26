@@ -22,6 +22,7 @@ class Particle:
         self.mle = None
         self.mle_sum = None
         self.sle = None
+        self.generate_tiling()
         self.update_score()
 
     def update_position(self):
@@ -73,12 +74,10 @@ class Particle:
 class SubSwarm:
     def __init__(self, params, antenna, swarm):
         self.centroid = bf_utils.random_complex(antenna.num_elements) * (1 - params.max_particle_velocity)
-        self.particles = []
-        for _ in range(params.subswarm_size):
-            self.particles.append(Particle(params, antenna, self))
         self.velocity = np.zeros(antenna.num_elements, dtype=complex)
-        self.centroid = self.calculate_centroid()
+        self.particles = [Particle(params, antenna, self) for _ in range(params.subswarm_size)]
         self.score_weighted_centroid = self.calculate_score_weighted_centroid()
+        self.centroid = self.calculate_centroid()
         self.subswarm_charge_coeff = params.subswarm_charge
         self.swarm = swarm
         self.best_particle = self.particles[0]
@@ -115,9 +114,7 @@ class SubSwarm:
 
 class Swarm:
     def __init__(self, params, antenna):
-        self.subswarms = [] # a list of the subswarms within the swarm, maintained as a sorted list by the centroid's score
-        for _ in range(params.num_subswarms):
-            self.subswarms.append(SubSwarm(params, antenna, self))
+        self.subswarms = [SubSwarm(params, antenna, self) for _ in range(params.num_subswarms)] # a list of the subswarms within the swarm, maintained as a sorted list by the centroid's score
         self.best_particle = self.subswarms[0].particles[0]
 
     def step(self):
@@ -140,9 +137,20 @@ def plot_particle_data(antenna, particle):
         particle.tile_labels,
     )
 
+def get_results_from_particle(particle):
+    return {
+            "position": particle.position,
+            "tiled_position": particle.tiled_position,
+            "score": particle.score,
+            "islr" : particle.islr,
+            "mle_sum" : particle.mle_sum,
+            "mle" : particle.mle,
+            "sle" : particle.sle,
+        }
+
 def beamformer(antenna, params, logging, config_name):
     if logging.verbose:
-        print("Setting up... ", end="")
+        print("Setting up... ", end=' ', flush=True)
     swarm = Swarm(params, antenna)
     if logging.verbose:
         print("Done.")
@@ -155,3 +163,4 @@ def beamformer(antenna, params, logging, config_name):
             print_particle_stats(swarm.best_particle)
         if logging.show_plots:
             plot_particle_data(antenna, swarm.best_particle)
+        results.append(get_results_from_particle(swarm.best_particle))

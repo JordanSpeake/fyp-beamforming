@@ -160,14 +160,13 @@ def main():
     if logging.write_results:
         output_path = get_output_path(config_name)
         with open(output_path, "w", newline="", encoding="utf-8") as file:
-            result = bf.beamformer(antenna, parameters, logging, config_name)
-            # try:
-                # result = bf.beamformer(antenna, parameters, logging, config_name)
-            # except Exception as e:
-            #     print(f"Simulation cancelled, error in beamformer.py: {e}")
-            # else:
-            #     write_results(result, file)
-            #     print("Simulation results written successfully")
+            try:
+                result = bf.beamformer(antenna, parameters, logging, config_name)
+            except Exception as e:
+                print(f"Simulation cancelled, error in beamformer.py: {e}")
+            else:
+                write_results(result, file)
+                print("Simulation results written successfully")
     else:
         with cProfile.Profile() as pr:
             _ = bf.beamformer(antenna, parameters, logging, config_name)
