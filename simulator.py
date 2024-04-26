@@ -99,7 +99,6 @@ def parse_logging_config(data):
             plots_persist=data["plots_persist"],
             verbose=data["verbose"],
             write_results=data["write_results"],
-            use_uniform_particle=data["use_uniform_particle"],
         )
     except KeyError as e:
         print(f"Failed to parse logging config: {e}")
@@ -170,7 +169,7 @@ def main():
     else:
         with cProfile.Profile() as pr:
             _ = bf.beamformer(antenna, parameters, logging, config_name)
-            pr.dump_stats("import_debug_profile_dump")
+            pr.dump_stats("new_pso_profile_dump")
     print("Done.")
 
 
