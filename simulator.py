@@ -83,7 +83,8 @@ def parse_parameters_config(data):
             subswarm_charge=data["subswarm_charge"],
             centroid_velocity_coeff=data["centroid_velocity_coeff"],
             dois=data["dois"],
-            particle_inertia_weight=data["particle_inertia_weight"]
+            particle_inertia_weight=data["particle_inertia_weight"],
+            rerandomisation_proximity=data["rerandomisation_proximity"],
         )
     except KeyError as e:
         print(f"Failed to parse parameters config: {e}")

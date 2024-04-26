@@ -9,7 +9,6 @@ class Particle:
         self.num_clusters = params.num_clusters
         self.velocity = bf_utils.random_complex(antenna.num_elements) * params.max_particle_velocity
         self.position = subswarm.centroid + (bf_utils.random_complex(antenna.num_elements) * params.subswarm_init_radius)
-        # TODO init tiled_x properly, don't use np.zeros
         self.tile_labels = np.zeros(antenna.num_elements, dtype=int)
         self.tile_values = np.zeros(params.num_clusters, dtype=complex)
         self.tiled_position = np.zeros(antenna.num_elements, dtype=complex)
@@ -77,10 +76,12 @@ class SubSwarm:
         self.velocity = np.zeros(antenna.num_elements, dtype=complex)
         self.particles = [Particle(params, antenna, self) for _ in range(params.subswarm_size)]
         self.score_weighted_centroid = self.calculate_score_weighted_centroid()
-        self.centroid = self.calculate_centroid()
         self.subswarm_charge_coeff = params.subswarm_charge
         self.swarm = swarm
         self.best_particle = self.particles[0]
+        self.objective_function = lambda position : antenna.fitness(position)
+        self.rerandomisation_proximity = params.rerandomisation_proximity
+
 
     def calculate_centroid(self):
         positions = [particle.position for particle in self.particles]
@@ -95,8 +96,8 @@ class SubSwarm:
         resultant_force = 0
         for subswarm in self.swarm.subswarms:
             if subswarm != self:
-                position_difference = self.centroid - subswarm.centroid
-                resultant_force += np.divide(position_difference, np.power(position_difference, 3))
+                distance = np.linalg.norm(self.centroid - subswarm.centroid)
+                resultant_force += np.divide(distance, np.power(distance, 3))
         return resultant_force
 
     def update_velocity(self):
@@ -105,7 +106,25 @@ class SubSwarm:
         coulomb_velocity = self.calculate_coulomb_force() * self.subswarm_charge_coeff
         self.velocity = coulomb_velocity
 
+    def rerandomise(self):
+        """Regenerate subswarm in a new, random position in the solution space"""
+        print(f"rera: {self}")
+        self.centroid = bf_utils.random_complex(antenna.num_elements) * (1 - params.max_particle_velocity)
+        self.velocity = np.zeros(antenna.num_elements, dtype=complex)
+        self.particles = [Particle(params, antenna, self) for _ in range(params.subswarm_size)]
+
+    def check_for_rerandomisation(self):
+        """If a subswarm is too close to another, re-randomise the worse performing subswarm"""
+        for subswarm in self.swarm.subswarms:
+            if subswarm != self:
+                distance = np.linalg.norm(self.centroid - subswarm.centroid)
+                if distance <= self.rerandomisation_proximity:
+                    score_difference = self.objective_function(self.score_weighted_centroid) - self.objective_function(subswarm.score_weighted_centroid)
+                    if score_difference < 0:
+                        self.rerandomise()
+
     def step(self):
+        self.check_for_rerandomisation()
         self.update_velocity()
         for particle in self.particles:
             particle.step()
@@ -148,6 +167,12 @@ def get_results_from_particle(particle):
             "sle" : particle.sle,
         }
 
+def print_swarm_stats(swarm):
+    print("Subswarms:")
+    for index, subswarm in enumerate(swarm.subswarms):
+        islr, _, _, _ = subswarm.objective_function(subswarm.score_weighted_centroid)
+        print(f"    SS{index} ISLR: {islr}, {bf_utils.to_dB(islr)}")
+
 def beamformer(antenna, params, logging, config_name):
     if logging.verbose:
         print("Setting up... ", end=' ', flush=True)
@@ -161,6 +186,7 @@ def beamformer(antenna, params, logging, config_name):
         swarm.step()
         if logging.verbose:
             print_particle_stats(swarm.best_particle)
+            print_swarm_stats(swarm)
         if logging.show_plots:
             plot_particle_data(antenna, swarm.best_particle)
         results.append(get_results_from_particle(swarm.best_particle))
