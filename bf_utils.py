@@ -2,6 +2,10 @@ import numpy as np
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 
+
+def to_dB(value):
+    return 10 * np.log10(value)
+
 def random_complex(size):
     """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
     return np.sqrt(np.random.uniform(0, 1, size)) * np.exp(
@@ -18,6 +22,12 @@ def spherical_to_uv(spherical_coords):
     return np.asarray([u, v])
 
 
+def quantize(self, value, bit_depth):
+    bits = np.power(2, bit_depth)
+    quantisation_step = int((phase / 2 * np.pi) * bits)
+    phase = quantisation_step * 2 * np.pi / bits
+    return phase
+
 @dataclass
 class Logging:
     show_plots: bool = False
@@ -30,31 +40,29 @@ class Logging:
 class Parameters:
     def __init__(
         self,
-        population_size,
         samples,
-        cognitive_coeff,
-        social_coeff,
-        intertia_weight,
         max_steps,
-        static_targets,
         max_particle_velocity,
-        neighbourhood_size,
-        num_tiles,
         phase_bit_depth,
-        elitism_count,
-        elitism_replacement_chance,
+        num_clusters,
+        subswarm_size,
+        subswarm_init_radius,
+        num_subswarms,
+        subswarm_charge,
+        centroid_velocity_coeff,
+        particle_inertia_weight,
+        dois,
     ):
-        self.population_size = population_size
-        self.cognitive_coeff = cognitive_coeff
-        self.social_coeff = social_coeff
-        self.intertia_weight = intertia_weight
+        self.subswarm_init_radius = subswarm_init_radius
+        self.num_clusters = num_clusters
+        self.subswarm_size = subswarm_size
+        self.num_subswarms = num_subswarms
         self.max_steps = max_steps
         self.max_particle_velocity = max_particle_velocity
-        self.neighbourhood_size = neighbourhood_size
-        self.targets = static_targets
-        self.num_tiles = num_tiles
         self.phase_bit_depth = phase_bit_depth
         self.samples = samples
         self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
-        self.elitism_count = elitism_count
-        self.elitism_replacement_chance = elitism_count
+        self.subswarm_charge = subswarm_charge
+        self.centroid_velocity_coeff = centroid_velocity_coeff
+        self.particle_inertia_weight = particle_inertia_weight
+        self.dois = dois

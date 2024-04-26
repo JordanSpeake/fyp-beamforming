@@ -1,220 +1,157 @@
-import numpy as np
-from sklearn.cluster import KMeans
 import bf_utils
-
+from sklearn.cluster import KMeans
+import numpy as np
 
 class Particle:
-    def __init__(self, antenna, parameters, uniform=False):
-        if uniform:
-            self.velocity = np.zeros(antenna.num_elements, dtype=complex)
-            self.position = np.ones(antenna.num_elements, dtype=complex)
-        else:
-            self.velocity = bf_utils.random_complex(antenna.num_elements)
-            self.position = bf_utils.random_complex(antenna.num_elements)
-        self.best_position = self.position
-        self.best_neighbour = None
+    def __init__(self, params, antenna, subswarm):
+        self.subswarm = subswarm
+        self.num_elements = antenna.num_elements
+        self.num_clusters = params.num_clusters
+        self.velocity = bf_utils.random_complex(antenna.num_elements) * params.max_particle_velocity
+        self.position = subswarm.centroid + (bf_utils.random_complex(antenna.num_elements) * params.subswarm_init_radius)
+        # TODO init tiled_x properly, don't use np.zeros
         self.tile_labels = np.zeros(antenna.num_elements, dtype=int)
-        self.tile_values = np.zeros(parameters.num_tiles, dtype=complex)
+        self.tile_values = np.zeros(params.num_clusters, dtype=complex)
         self.tiled_position = np.zeros(antenna.num_elements, dtype=complex)
+        self.objective_function = lambda position : antenna.fitness(position)
+        self.inertia_weight = params.particle_inertia_weight
+        self.phase_bit_depth = params.phase_bit_depth
+        self.max_particle_velocity = params.max_particle_velocity
+        self.score = None
         self.islr = None
-        self.mle = []
+        self.mle = None
         self.mle_sum = None
         self.sle = None
-        self.score = float("-inf")
-        self.best_score = self.score
+        self.update_score()
 
-
-class Population:
-    def __init__(self, antenna, parameters, uniform=False):
-        self.population = []
-        for i in range(parameters.population_size):
-            self.population.append(Particle(antenna, parameters, uniform=uniform))
-        self.neighbourhood_size = parameters.neighbourhood_size
-
-        self.fitness_function = lambda p: antenna.fitness(p)
-        self.inertia_weight = parameters.intertia_weight
-        self.cognitive_coeff = parameters.cognitive_coeff
-        self.social_coeff = parameters.social_coeff
-        self.max_velocity = parameters.max_particle_velocity
-        self.phase_bit_depth = parameters.phase_bit_depth
-
-        self.num_elements = antenna.num_elements
-        self.clusters = parameters.num_tiles
-
-        self.elitism_count = parameters.elitism_count
-        self.elitism_replacement_chance = parameters.elitism_replacement_chance
-        self.best_particles = self.population[0 : self.elitism_count]
-
-    def quantize_phase(self, phase):
-        bits = np.power(2, self.phase_bit_depth)
-        quantisation_step = int((phase / 2 * np.pi) * bits)
-        phase = quantisation_step * 2 * np.pi / bits
-        return phase
-
-    def update_velocity(self, particle):
-        """Set and limit velocity of particle to max_particle_velocity and wrap direction [0, 2pi]"""
-        inertial_component = self.inertia_weight * particle.velocity
-        # cognitive_component = (
-        #     self.cognitive_coeff
-        #     * bf_utils.random_complex(self.num_elements)
-        #     * (np.subtract(particle.best_position, particle.position))
-        # )
-        social_component = (
-            self.social_coeff
-            * bf_utils.random_complex(self.num_elements)
-            * (np.subtract(particle.best_neighbour.position, particle.position))
-        )
-        # velocity = inertial_component + cognitive_component + social_component
-        velocity = inertial_component + social_component
-        speed = np.clip(np.abs(velocity), 0, self.max_velocity)
-        direction = np.mod(np.angle(velocity), 2 * np.pi)
-        particle.velocity = speed * np.exp(1j * direction)
-
-    def update_position(self, particle):
-        """Set and limit magnitude (weights) of particle to 1 and wrap its angle (phase) [0, 2pi]"""
-        position = np.add(particle.position, particle.velocity)
+    def update_position(self):
+        """Update the particle's position by addition of it's velocity"""
+        position = np.add(self.position, self.velocity)
         weights = np.clip(np.abs(position), 0, 1)
         phases = np.mod(np.angle(position), 2 * np.pi)
         if self.phase_bit_depth > 0:
             for index, phase in enumerate(phases):
                 phases[index] = self.quantize_phase(phase)
-        particle.position = weights * np.exp(1j * phases)
+        self.position = weights * np.exp(1j * phases)
 
-    def generate_tiling(self, particle):
+    def update_velocity(self):
+        """Update the particle's velocity, and limit it to self.max_particle_velocity"""
+        inertial_component = self.velocity * self.inertia_weight
+        toward_centroid_component = self.position - self.subswarm.score_weighted_centroid
+        subswarm_velocity_component = self.subswarm.velocity
+        self.velocity = toward_centroid_component + subswarm_velocity_component + inertial_component
+        velocity_magnitude = np.sqrt(np.dot(self.velocity, self.velocity))
+        if velocity_magnitude > self.max_particle_velocity:
+            self.velocity = np.multiply(np.divide(self.velocity, velocity_magnitude), self.max_particle_velocity)
+
+    def generate_tiling(self):
         """Uses k means clustering to update tiled_position, based on phase and amplitude"""
         separated_position = np.zeros((self.num_elements, 2))
-        separated_position[:, 0] = np.abs(particle.position)
-        separated_position[:, 1] = np.angle(particle.position)
-        kmeans = KMeans(n_clusters=self.clusters).fit(separated_position)
-        particle.tile_labels = kmeans.labels_
+        separated_position[:, 0] = np.abs(self.position)
+        separated_position[:, 1] = np.angle(self.position)
+        kmeans = KMeans(n_clusters=self.num_clusters).fit(separated_position)
+        self.tile_labels = kmeans.labels_
         centres = kmeans.cluster_centers_
-        particle.tile_values = centres[:, 0] * np.exp(1j * centres[:, 1])
-        for index, label in enumerate(particle.tile_labels):
-            particle.tiled_position[index] = particle.tile_values[label]
+        self.tile_values = centres[:, 0] * np.exp(1j * centres[:, 1])
+        for index, label in enumerate(self.tile_labels):
+            self.tiled_position[index] = self.tile_values[label]
 
-    def generate_best_particle_list(self):
-        best_particles = []
-        for particle in self.population:
-            if len(best_particles) == 0:
-                best_particles.append(particle)
-            elif len(best_particles) < self.elitism_count:
-                for index, particle_in_list in enumerate(best_particles):
-                    if particle.score > particle_in_list.score:
-                        best_particles.insert(index, particle)
-                        break
-                best_particles.append(particle)
-            else:
-                for index, particle_in_list in enumerate(self.best_particles):
-                    if particle.score > particle_in_list.score:
-                        self.best_particles.pop(-1)
-                        self.best_particles.insert(index, particle)
-                        break
-
-    def update_particle(self, particle):
-        """Move the particle to the next position, then update it's score based on the provided fitness function"""
-        self.update_velocity(particle)
-        self.update_position(particle)
-        if self.clusters < 1: # if the number of tiles is set to 0 or less, don't do element tiling.
-            islr, mle, mle_sum, sle = self.fitness_function(particle.position)
-        else:
-            self.generate_tiling(particle)
-            islr, mle, mle_sum, sle = self.fitness_function(particle.tiled_position)
-        particle.score = 1/islr
-        particle.islr = islr
-        particle.mle = mle
-        particle.mle_sum = mle_sum
-        particle.sle = sle
-
-    def best_neighbour_index(self, index):
-        """Find the best scoring particle in the neighbourhood (by particle index) of a given particle"""
-        neighbourhood = np.mod(
-            np.arange(
-                index - self.neighbourhood_size, index + self.neighbourhood_size + 1
-            ),
-            len(self.population),
-        )
-        best_score = float("-inf")
-        best_particle_index = index
-        for i in neighbourhood:
-            if self.population[i].score > best_score:
-                best_particle_index = i
-        return best_particle_index
-
-    def update_best_neighbours(self):
-        for index, particle in enumerate(self.population):
-            particle.best_neighbour = self.population[self.best_neighbour_index(index)]
-
-    def repopulate_with_elitism(self):
-        """Replace a random selection of low-scoring particles with high scoring particles"""
-        for particle in self.population:
-            if particle not in self.best_particles:
-                if np.random.rand() < self.elitism_replacement_chance:
-                    new_particle_index = np.random.randint(0, self.elitism_count)
-                    particle.position = self.best_particles[new_particle_index].position
-                    particle.velocity = 0.25 * bf_utils.random_complex(self.num_elements) # add a small, random velocity
+    def update_score(self):
+        islr, mle, mle_sum, sle = self.objective_function(self.tiled_position)
+        self.islr = islr
+        self.mle = mle
+        self.mle_sum = mle_sum
+        self.sle = sle
+        self.score = 1/islr
 
     def step(self):
-        """Take a single step in the simulation, update all particles once."""
-        self.update_best_neighbours()
-        for particle in self.population:
-            self.update_particle(particle)
-        self.generate_best_particle_list()
-        self.repopulate_with_elitism()
+        self.update_velocity()
+        self.update_position()
+        self.generate_tiling()
+        self.update_score()
 
+class SubSwarm:
+    def __init__(self, params, antenna, swarm):
+        self.centroid = bf_utils.random_complex(antenna.num_elements) * (1 - params.max_particle_velocity)
+        self.particles = []
+        for _ in range(params.subswarm_size):
+            self.particles.append(Particle(params, antenna, self))
+        self.velocity = np.zeros(antenna.num_elements, dtype=complex)
+        self.centroid = self.calculate_centroid()
+        self.score_weighted_centroid = self.calculate_score_weighted_centroid()
+        self.subswarm_charge_coeff = params.subswarm_charge
+        self.swarm = swarm
+        self.best_particle = self.particles[0]
 
-class PSO:
-    def __init__(self, antenna, parameters, logging):
-        self.antenna = antenna
-        self.parameters = parameters
-        self.logging = logging
-        self.population = Population(
-            self.antenna, self.parameters, uniform=self.logging.use_uniform_particle
-        )
-        self.result = []
+    def calculate_centroid(self):
+        positions = [particle.position for particle in self.particles]
+        return np.mean(positions, axis=0)
 
-    def update_results(self):
-        self.result.append(
-            {
-                "position": self.population.best_particles[0].position,
-                "tiled_position": self.population.best_particles[0].tiled_position,
-                "score": self.population.best_particles[0].score,
-                "islr" : self.population.best_particles[0].islr,
-                "mle_sum" : self.population.best_particles[0].mle_sum,
-                "mle" : self.population.best_particles[0].mle,
-                "sle" : self.population.best_particles[0].sle,
-            }
-        )
+    def calculate_score_weighted_centroid(self):
+        positions = [particle.position for particle in self.particles]
+        scores = [particle.score for particle in self.particles]
+        return np.average(positions, weights=scores, axis=0)
 
-    def run(self):
-        for step_counter in range(self.parameters.max_steps):
-            self.population.step()
-            self.update_results()
-            if self.logging.verbose:
-                print(f"Step: {step_counter}/{self.parameters.max_steps-1}")
-                print(
-                    f"Position: {self.population.best_particles[0].position}\n Score: {self.population.best_particles[0].score}"
-                )
-                print(f"ISLR: {self.population.best_particles[0].islr} \n SLE: {self.population.best_particles[0].sle}\n MLEs: {self.population.best_particles[0].mle}")
-            if self.logging.show_plots:
-                self.antenna.display(
-                    self.population.best_particles[0].position,
-                    self.population.best_particles[0].tiled_position,
-                    self.population.best_particles[0].tile_labels,
-                )
-        return self.result
+    def calculate_coulomb_force(self):
+        resultant_force = 0
+        for subswarm in self.swarm.subswarms:
+            if subswarm != self:
+                position_difference = self.centroid - subswarm.centroid
+                resultant_force += np.divide(position_difference, np.power(position_difference, 3))
+        return resultant_force
 
+    def update_velocity(self):
+        self.centroid = self.calculate_centroid()
+        self.score_weighted_centroid = self.calculate_score_weighted_centroid()
+        coulomb_velocity = self.calculate_coulomb_force() * self.subswarm_charge_coeff
+        self.velocity = coulomb_velocity
 
-def beamformer(antenna, parameters, logging, config_name):
-    particle_swamp_optimiser = PSO(antenna, parameters, logging)
+    def step(self):
+        self.update_velocity()
+        for particle in self.particles:
+            particle.step()
+            if particle.score > self.best_particle.score:
+                self.best_particle = particle
+
+class Swarm:
+    def __init__(self, params, antenna):
+        self.subswarms = [] # a list of the subswarms within the swarm, maintained as a sorted list by the centroid's score
+        for _ in range(params.num_subswarms):
+            self.subswarms.append(SubSwarm(params, antenna, self))
+        self.best_particle = self.subswarms[0].particles[0]
+
+    def step(self):
+        for subswarm in self.subswarms:
+            subswarm.step()
+            if subswarm.best_particle.score > self.best_particle.score:
+                self.best_particle = subswarm.best_particle
+
+def print_particle_stats(particle):
+    # print(f"    Best Position: {swarm.best_particle.position}")
+    print(f"    Score: {particle.score}")
+    print(f"    ISLR: {particle.islr}, {bf_utils.to_dB(particle.islr)} dB")
+    print(f"    SLE: {particle.sle}, {bf_utils.to_dB(particle.sle)} dB")
+    print(f"    MLEs: {particle.mle}, {bf_utils.to_dB(particle.mle)} dB")
+
+def plot_particle_data(antenna, particle):
+    antenna.display(
+        particle.position,
+        particle.tiled_position,
+        particle.tile_labels,
+    )
+
+def beamformer(antenna, params, logging, config_name):
     if logging.verbose:
-        print(f"Starting simulation: {config_name}")
-    result = particle_swamp_optimiser.run()
+        print("Setting up... ", end="")
+    swarm = Swarm(params, antenna)
     if logging.verbose:
         print("Done.")
-    if logging.show_plots and logging.plots_persist:
-        antenna.display(
-            result[-1]["position"],
-            result[-1]["tiled_position"],
-            persist=True,
-        )
-    return result
+    results = []
+    for step in range(params.max_steps):
+        if logging.verbose:
+            print(f"Step {step}/{params.max_steps-1}")
+        swarm.step()
+        if logging.verbose:
+            print_particle_stats(swarm.best_particle)
+        if logging.show_plots:
+            plot_particle_data(antenna, swarm.best_particle)

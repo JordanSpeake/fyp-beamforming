@@ -72,19 +72,18 @@ def parse_parameters_config(data):
     """Constructs an instants of the parameters calss defined in [parameters] in the config file"""
     try:
         parameters = bf_utils.Parameters(
-            population_size=data["population_size"],
             samples=data["samples"],
-            cognitive_coeff=data["cognitive_coeff"],
-            social_coeff=data["social_coeff"],
-            intertia_weight=data["inertia_weight"],
             max_steps=data["max_steps"],
-            static_targets=data["static_targets"],
             max_particle_velocity=data["max_particle_velocity"],
-            neighbourhood_size=data["neighbourhood_size"],
-            num_tiles=data["num_tiles"],
             phase_bit_depth=data["phase_bit_depth"],
-            elitism_count=data["elitism_count"],
-            elitism_replacement_chance=data["elitism_replacement_chance"],
+            num_clusters=data["num_clusters"],
+            subswarm_size=data["subswarm_size"],
+            subswarm_init_radius=data["subswarm_init_radius"],
+            num_subswarms=data["num_subswarms"],
+            subswarm_charge=data["subswarm_charge"],
+            centroid_velocity_coeff=data["centroid_velocity_coeff"],
+            dois=data["dois"],
+            particle_inertia_weight=data["particle_inertia_weight"]
         )
     except KeyError as e:
         print(f"Failed to parse parameters config: {e}")
@@ -161,13 +160,14 @@ def main():
     if logging.write_results:
         output_path = get_output_path(config_name)
         with open(output_path, "w", newline="", encoding="utf-8") as file:
-            try:
-                result = bf.beamformer(antenna, parameters, logging, config_name)
-            except Exception as e:
-                print(f"Simulation cancelled, error in beamformer.py: {e}")
-            else:
-                write_results(result, file)
-                print("Simulation results written successfully")
+            result = bf.beamformer(antenna, parameters, logging, config_name)
+            # try:
+                # result = bf.beamformer(antenna, parameters, logging, config_name)
+            # except Exception as e:
+            #     print(f"Simulation cancelled, error in beamformer.py: {e}")
+            # else:
+            #     write_results(result, file)
+            #     print("Simulation results written successfully")
     else:
         with cProfile.Profile() as pr:
             _ = bf.beamformer(antenna, parameters, logging, config_name)

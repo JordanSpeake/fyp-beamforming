@@ -16,9 +16,6 @@ class Antenna:
         self.frequency = frequency
         wavelength = 3e8 / frequency
         self.wavenumber = 2 * np.pi / wavelength
-        print(f"Frequency: {self.frequency}")
-        print(f"Wavelength: {wavelength}")
-        print(f"Wavenumber: {self.wavenumber}")
         self.num_elements = num_elements
         self.samples = parameters.samples
         self.u_grid = parameters.u_grid
@@ -28,7 +25,7 @@ class Antenna:
         self.ax_tile_pattern = self.figure.add_subplot(grid_spec[:, 1])
         self.ax_untiled = self.figure.add_subplot(grid_spec[0, 0])
         self.ax_tiled = self.figure.add_subplot(grid_spec[1, 0])
-        self.targets = parameters.targets
+        self.dois = parameters.dois
 
     def update_array_factor_axis(self, axis, array_factor):
         """Reset and clear axes for the next step's data output to be plotted"""
@@ -44,11 +41,11 @@ class Antenna:
     def add_doi_indicators(self):
         """Adds marks on the array factor plots indicating the DOIs"""
         axes = [self.ax_tiled, self.ax_untiled]
-        for target in self.targets:
-            pos = bf_utils.spherical_to_uv(target)
+        for doi in self.dois:
+            pos = bf_utils.spherical_to_uv(doi)
             for axis in axes:
                 axis.add_patch(
-                    patches.Circle((pos[0], pos[1]), target[2], color="k", fill=False)
+                    patches.Circle((pos[0], pos[1]), doi[2], color="k", fill=False)
                 )
 
     def display(
@@ -126,7 +123,7 @@ class Antenna:
         radiated_power = self.radiated_power(complex_weights)
         mle_sum = 0
         mle = []
-        for doi in self.targets:
+        for doi in self.dois:
             doi_uv = bf_utils.spherical_to_uv(doi[0:2])
             doi_bw = doi[2]
             doi_mle = self.calculate_MLE(doi_uv, doi_bw, radiated_power)
