@@ -52,6 +52,7 @@ class Parameters:
         particle_inertia_weight,
         dois,
         rerandomisation_proximity,
+        social_coeff,
     ):
         self.subswarm_init_radius = subswarm_init_radius
         self.num_clusters = num_clusters
@@ -67,3 +68,4 @@ class Parameters:
         self.particle_inertia_weight = particle_inertia_weight
         self.dois = dois
         self.rerandomisation_proximity = rerandomisation_proximity
+        self.social_coeff = social_coeff

@@ -85,6 +85,7 @@ def parse_parameters_config(data):
             dois=data["dois"],
             particle_inertia_weight=data["particle_inertia_weight"],
             rerandomisation_proximity=data["rerandomisation_proximity"],
+            social_coeff=data["social_coeff"],
         )
     except KeyError as e:
         print(f"Failed to parse parameters config: {e}")

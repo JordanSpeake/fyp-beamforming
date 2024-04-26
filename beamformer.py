@@ -16,6 +16,8 @@ class Particle:
         self.inertia_weight = params.particle_inertia_weight
         self.phase_bit_depth = params.phase_bit_depth
         self.max_particle_velocity = params.max_particle_velocity
+        self.centroid_velocity_coeff = params.centroid_velocity_coeff
+        self.social_coeff = params.social_coeff
         self.score = None
         self.islr = None
         self.mle = None
@@ -37,7 +39,8 @@ class Particle:
     def update_velocity(self):
         """Update the particle's velocity, and limit it to self.max_particle_velocity"""
         inertial_component = self.velocity * self.inertia_weight
-        toward_centroid_component = self.position - self.subswarm.score_weighted_centroid
+        toward_centroid_component = (self.subswarm.score_weighted_centroid - self.position) * self.centroid_velocity_coeff
+        social_component = (self.subswarm.best_particle.position - self.position) * self.social_coeff
         subswarm_velocity_component = self.subswarm.velocity
         self.velocity = toward_centroid_component + subswarm_velocity_component + inertial_component
         velocity_magnitude = np.sqrt(np.dot(self.velocity, self.velocity))
