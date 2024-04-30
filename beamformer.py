@@ -48,10 +48,10 @@ class Particle:
             self.velocity = np.multiply(np.divide(self.velocity, velocity_magnitude), self.max_particle_velocity)
 
     def generate_tiling(self):
-        """Uses k means clustering to update tiled_position, based on phase and amplitude"""
+        """Uses k means clustering to update tiled_position, based on real and imag values"""
         separated_position = np.zeros((self.num_elements, 2))
-        separated_position[:, 0] = np.abs(self.position)
-        separated_position[:, 1] = np.angle(self.position)
+        separated_position[:, 0] = np.real(self.position)
+        separated_position[:, 1] = np.imag(self.position)
         kmeans = KMeans(n_clusters=self.num_clusters).fit(separated_position)
         self.tile_labels = kmeans.labels_
         centres = kmeans.cluster_centers_
