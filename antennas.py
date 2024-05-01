@@ -93,7 +93,7 @@ class Antenna:
     def calculate_MLE(self, doi, beamwidth, radiated_power):
         """Estimate the lobe energy at the given DOI, with the defined complex weights"""
         u_sample_range, v_sample_range = self.estimate_MLE_region(doi, beamwidth)
-        integration_constant = np.power(1 / self.samples, 2)
+        integration_constant = np.power(2 / self.samples, 2)
         accumulator = 0
         for u_sample in u_sample_range:
             for v_sample in v_sample_range:
@@ -107,7 +107,7 @@ class Antenna:
 
     def calculate_SLE(self, mle_sum, radiated_power):
         """Estimates SLE as the total energy minus the sum of all MLEs. Rough estimate."""
-        integration_constant = np.power(1 / self.samples, 2)
+        integration_constant = np.power(2 / self.samples, 2)
         w = (
             2 * np.pi / 3
         )  # Estimate, w=2pi/3 when integrated over the unit disc, not correct but close enough.
