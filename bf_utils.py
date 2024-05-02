@@ -12,7 +12,6 @@ def random_complex(size):
         1.0j * np.random.uniform(0, 2 * np.pi, size)
     )
 
-
 def spherical_to_uv(spherical_coords):
     """Convert [theta, phi] to [u, v]. From spherical to directional cosine coordinates."""
     theta = spherical_coords[0]
@@ -22,11 +21,11 @@ def spherical_to_uv(spherical_coords):
     return np.asarray([u, v])
 
 
-def quantize(self, value, bit_depth):
+def quantize(value, bit_depth):
     bits = np.power(2, bit_depth)
-    quantisation_step = int((phase / 2 * np.pi) * bits)
-    phase = quantisation_step * 2 * np.pi / bits
-    return phase
+    quantisation_step = int((value / 2 * np.pi) * bits)
+    value = quantisation_step * 2 * np.pi / bits
+    return value
 
 @dataclass
 class Logging:
@@ -63,6 +62,10 @@ class Parameters:
         self.phase_bit_depth = phase_bit_depth
         self.samples = samples
         self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
+        self.w_grid = np.zeros_like(self.u_grid)
+        self.w_grid = np.emath.sqrt(1 - np.power(self.u_grid, 2) - np.power(self.v_grid, 2))
+        self.w_grid = self.w_grid.real
+        print(self.w_grid)
         self.subswarm_charge = subswarm_charge
         self.centroid_velocity_coeff = centroid_velocity_coeff
         self.particle_inertia_weight = particle_inertia_weight

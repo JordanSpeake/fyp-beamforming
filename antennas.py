@@ -20,6 +20,7 @@ class Antenna:
         self.samples = parameters.samples
         self.u_grid = parameters.u_grid
         self.v_grid = parameters.v_grid
+        self.w_grid = parameters.w_grid
         self.figure = plt.figure()
         grid_spec = gridspec.GridSpec(2, 2)
         self.ax_tile_pattern = self.figure.add_subplot(grid_spec[:, 1])
@@ -99,19 +100,18 @@ class Antenna:
             for v_sample in v_sample_range:
                 u = self.u_grid[0][u_sample]
                 v = self.v_grid[v_sample][0]
-                radiated_power_sample = radiated_power[u_sample][v_sample]
-                w = np.sqrt(1 - np.power(u, 2) - np.power(v, 2))
-                accumulator += radiated_power_sample / np.abs(w)
+                w = self.w_grid[u_sample][v_sample]
+                if w > 0:
+                    accumulator += radiated_power[u_sample][v_sample] /np.abs(w)
         mle = accumulator * integration_constant
         return mle
 
     def calculate_SLE(self, mle_sum, radiated_power):
         """Estimates SLE as the total energy minus the sum of all MLEs. Rough estimate."""
         integration_constant = np.power(2 / self.samples, 2)
-        w = (
-            2 * np.pi / 3
-        )  # Estimate, w=2pi/3 when integrated over the unit disc, not correct but close enough.
-        sle = (np.sum(radiated_power) * integration_constant / w) - mle_sum
+        accumulator = 0
+        sle_grid = np.divide(radiated_power, self.w_grid)
+        sle = np.sum(sle_grid[self.w_grid != 0]) - mle_sum
         return sle
 
     def fitness(self, complex_weights):
