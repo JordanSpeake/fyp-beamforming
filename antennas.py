@@ -144,6 +144,111 @@ class Antenna:
         assert False, "radiated_power() must be defined in child class."
 
 
+class SimpleULA:
+    def __init__(self, frequency, spacing, num_elements, parameters):
+        self.frequency = frequency
+        wavelength = 3e8 / frequency
+        self.wavenumber = 2 * np.pi / wavelength
+        self.num_elements = num_elements
+        self.spacing = spacing
+        self.samples = parameters.samples
+        self.thetas = np.linspace(-np.pi/2, np.pi/2, self.samples)
+        self.figure = plt.figure()
+        grid_spec = gridspec.GridSpec(1, 1)
+        self.ax_beam_pattern = self.figure.add_subplot(grid_spec[0, 0])
+        self.dois = parameters.dois
+
+
+    def update_array_factor_axis(self, axis, array_factor):
+        """Reset and clear axes for the next step's data output to be plotted"""
+        axis.clear()
+        axis.set_xlabel("Theta")
+        axis.set_ylim(-50, 0)
+        axis.set_ylabel("Array Factor (dB)")
+        axis.plot(array_factor)
+
+    def add_doi_indicators(self):
+        """Adds marks on the array factor plots indicating the DOIs"""
+        for doi in self.dois:
+            theta = doi[0]
+            bw = doi[2]
+            theta_range = np.clip([theta - bw, theta + bw], -np.pi/2, np.pi/2)
+            theta_sample_range = np.rint(
+                np.multiply(np.divide(np.add(theta_range, np.pi/2), np.pi), (self.samples - 1))
+            )
+            self.ax_beam_pattern.axvline(theta_sample_range[0])
+            self.ax_beam_pattern.axvline(theta_sample_range[1])
+                # add line on X position that reflects the theta of the DOI
+
+    def display(
+        self,
+        complex_weights,
+        _1,
+        _2,
+        persist=False,
+        pause_time=1,
+    ):
+        """Display the given untiled and tiled weights, including the selection pattern"""
+        # Really nasty function signature here but that's ok. :)
+        array_factor = 10 * np.log10(self.radiated_power(complex_weights))
+        normalised_af = array_factor - np.max(array_factor)
+        self.update_array_factor_axis(self.ax_beam_pattern, normalised_af)
+        self.ax_beam_pattern.set_title("Array Factor")
+        self.add_doi_indicators()
+        if persist:
+            plt.show()
+        else:
+            plt.pause(pause_time)
+
+    def fitness(self, complex_weights):
+        """Return the islr, and optionally other data, of a given set of complex weights
+        mle - Main Lobe Energy
+        sle - Sidelobe Energy
+        islr - Integrated Sidelobe Ratio
+        """
+        radiated_power = self.radiated_power(complex_weights)
+        mle_sum = 0
+        mle = []
+        for doi in self.dois:
+            doi_theta = doi[0]
+            doi_bw = doi[2]
+            doi_mle = self.calculate_MLE(doi_theta, doi_bw, radiated_power)
+            mle_sum += doi_mle
+            mle.append(doi_mle)
+        sle = self.calculate_SLE(mle_sum, radiated_power)
+        islr = sle / mle_sum
+        return islr, mle, mle_sum, sle
+
+    def calculate_MLE(self, theta, bw, radiated_power):
+        theta_range = np.clip([theta - bw, theta + bw], -np.pi/2, np.pi/2)
+        theta_sample_range = np.rint(
+            np.multiply(np.divide(np.add(theta_range, np.pi/2), np.pi), (self.samples - 1))
+        )
+        theta_samples = np.arange(
+            int(theta_sample_range[0]), int(theta_sample_range[1]), step=1, dtype=int
+        )
+        integration_region = radiated_power[theta_samples]
+        mle = np.sum(integration_region) * 1/self.samples
+        return mle
+
+    def calculate_SLE(self, mle_sum, radiated_power):
+        sle = (np.sum(radiated_power) * 1/self.samples) - mle_sum
+        return sle
+
+    def radiated_power(self, complex_weights):
+        """Calculate the radiated_power for the given complex weights"""
+        electric_field = np.zeros_like(self.thetas, dtype=complex)
+        phases = np.angle(complex_weights)
+        weights = np.abs(complex_weights)
+        sin_thetas = np.sin(self.thetas)
+        for element in range(self.num_elements):
+            exponent = 1j * (phases[element] + (self.wavenumber * element * self.spacing * sin_thetas))
+            electric_field += weights[element] * np.exp(exponent)
+        radiated_power = np.power(np.abs(electric_field), 2)
+        return radiated_power
+
+
+
 class RectangularPlanar(Antenna):
     def __init__(self, frequency: float, spacing: tuple, num_el: tuple, parameters):
         num_elements = num_el[0] * num_el[1]

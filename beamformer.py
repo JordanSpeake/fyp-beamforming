@@ -70,7 +70,7 @@ class Particle:
         self.sle = sle
         sle_db = bf_utils.to_dB(sle)
         mle_sum_db = bf_utils.to_dB(mle_sum)
-        self.score = (2 * mle_sum_db) - sle_db
+        self.score = 1/islr
 
     def step(self):
         self.update_velocity()
