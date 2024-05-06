@@ -23,7 +23,7 @@ class Particle:
         self.mle = None
         self.mle_sum = None
         self.sle = None
-        if self.num_clusters > 0: self.generate_tiling()
+        self.mse = None
         self.update_score()
 
     def update_position(self):
@@ -42,6 +42,7 @@ class Particle:
         toward_centroid_component = (self.subswarm.score_weighted_centroid - self.position) * self.centroid_velocity_coeff
         social_component = (self.subswarm.best_particle.position - self.position) * self.social_coeff
         subswarm_velocity_component = self.subswarm.velocity
+        random_component = 0.001 * self.islr * bf_utils.random_complex(self.num_elements)
         self.velocity = toward_centroid_component + subswarm_velocity_component + inertial_component
         velocity_magnitude = np.sqrt(np.dot(self.velocity, self.velocity))
         if velocity_magnitude > self.max_particle_velocity:
@@ -61,26 +62,25 @@ class Particle:
 
     def update_score(self):
         if self.num_clusters <= 0:
-            islr, mle, mle_sum, sle = self.objective_function(self.position)
+            mse, islr, mle, mle_sum, sle = self.objective_function(self.position)
         else:
-            islr, mle, mle_sum, sle = self.objective_function(self.tiled_position)
+            self.generate_tiling()
+            mse, islr, mle, mle_sum, sle = self.objective_function(self.tiled_position)
         self.islr = islr
         self.mle = mle
         self.mle_sum = mle_sum
         self.sle = sle
-        sle_db = bf_utils.to_dB(sle)
-        mle_sum_db = bf_utils.to_dB(mle_sum)
+        self.mse = mse
         self.score = 1/islr
 
     def step(self):
         self.update_velocity()
         self.update_position()
-        if self.num_clusters > 0: self.generate_tiling()
         self.update_score()
 
 class SubSwarm:
     def __init__(self, params, antenna, swarm):
-        self.centroid = bf_utils.random_complex(antenna.num_elements) * (1 - params.max_particle_velocity)
+        self.centroid = bf_utils.random_complex(antenna.num_elements)
         self.velocity = np.zeros(antenna.num_elements, dtype=complex)
         self.particles = [Particle(params, antenna, self) for _ in range(params.subswarm_size)]
         self.score_weighted_centroid = self.calculate_score_weighted_centroid()
@@ -89,7 +89,6 @@ class SubSwarm:
         self.best_particle = self.particles[0]
         self.objective_function = lambda position : antenna.fitness(position)
         self.rerandomisation_proximity = params.rerandomisation_proximity
-
 
     def calculate_centroid(self):
         positions = [particle.position for particle in self.particles]
@@ -105,7 +104,8 @@ class SubSwarm:
         for subswarm in self.swarm.subswarms:
             if subswarm != self:
                 distance = np.linalg.norm(self.centroid - subswarm.centroid)
-                resultant_force += np.divide(distance, np.power(distance, 3))
+                direction = np.divide(self.centroid - subswarm.centroid, distance)
+                resultant_force += direction * np.divide(distance, np.power(distance, 3))
         return resultant_force
 
     def update_velocity(self):
@@ -124,7 +124,6 @@ class SubSwarm:
                     other_score, _, _, _ = self.objective_function(subswarm.score_weighted_centroid)
                     score_difference = (1/own_score) - (1/other_score)
                     if score_difference < 0:
-                        print(f"Rerandomise: {self}")
                         self.swarm.rerandomise_subswarm(self)
 
     def step(self):
@@ -181,7 +180,7 @@ def get_results_from_particle(particle):
 def print_swarm_stats(swarm):
     print("Subswarms:")
     for index, subswarm in enumerate(swarm.subswarms):
-        islr, _, _, _ = subswarm.objective_function(subswarm.score_weighted_centroid)
+        _, islr, _, _, _ = subswarm.objective_function(subswarm.score_weighted_centroid)
         print(f"    SS{index} ISLR: {islr}, {bf_utils.to_dB(islr)}")
 
 def beamformer(antenna, params, logging, config_name):
@@ -201,4 +200,6 @@ def beamformer(antenna, params, logging, config_name):
         if logging.show_plots:
             plot_particle_data(antenna, swarm.best_particle)
         results.append(get_results_from_particle(swarm.best_particle))
+    if logging.output_final_values:
+        return swarm.best_particle.islr, swarm.best_particle.mle_sum
     return results

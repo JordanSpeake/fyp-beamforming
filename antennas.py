@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
-
+from sklearn.metrics import mean_squared_error
 
 class Antenna:
     """Base class for all antennas"""
@@ -78,10 +78,10 @@ class Antenna:
         u_range = np.clip([doi[0] - bw, doi[0] + bw], -1, 1)
         v_range = np.clip([doi[1] - bw, doi[1] + bw], -1, 1)
         u_sample_range = np.rint(
-            np.multiply(np.divide(np.add(u_range, 1), 2), (self.samples - 1))
+            np.multiply(np.divide(np.add(u_range, 1), 2), (self.samples))
         )
         v_sample_range = np.rint(
-            np.multiply(np.divide(np.add(v_range, 1), 2), (self.samples - 1))
+            np.multiply(np.divide(np.add(v_range, 1), 2), (self.samples))
         )
         u_samples = np.arange(
             int(u_sample_range[0]), int(u_sample_range[1]), step=1, dtype=int
@@ -157,18 +157,11 @@ class SimpleULA:
         grid_spec = gridspec.GridSpec(1, 1)
         self.ax_beam_pattern = self.figure.add_subplot(grid_spec[0, 0])
         self.dois = parameters.dois
+        self.target_sidelobe_level = parameters.target_sidelobe_level
+        self.lms_target = self.generate_lms_target()
 
-
-    def update_array_factor_axis(self, axis, array_factor):
-        """Reset and clear axes for the next step's data output to be plotted"""
-        axis.clear()
-        axis.set_xlabel("Theta")
-        axis.set_ylim(-50, 0)
-        axis.set_ylabel("Array Factor (dB)")
-        axis.plot(array_factor)
-
-    def add_doi_indicators(self):
-        """Adds marks on the array factor plots indicating the DOIs"""
+    def generate_lms_target(self):
+        lms_target = np.asarray([self.target_sidelobe_level for _ in range(self.samples)])
         for doi in self.dois:
             theta = doi[0]
             bw = doi[2]
@@ -176,9 +169,17 @@ class SimpleULA:
             theta_sample_range = np.rint(
                 np.multiply(np.divide(np.add(theta_range, np.pi/2), np.pi), (self.samples - 1))
             )
-            self.ax_beam_pattern.axvline(theta_sample_range[0])
-            self.ax_beam_pattern.axvline(theta_sample_range[1])
-                # add line on X position that reflects the theta of the DOI
+            lms_target[int(theta_sample_range[0]):int(theta_sample_range[1])] = 0
+        return lms_target
+
+    def update_array_factor_axis(self, axis, array_factor):
+        """Reset and clear axes for the next step's data output to be plotted"""
+        axis.clear()
+        axis.set_xlabel("Theta")
+        axis.set_ylim(self.target_sidelobe_level-10, 10)
+        axis.set_ylabel("Array Factor (dB)")
+        axis.plot(array_factor)
+        axis.plot(self.lms_target, 'red')
 
     def display(
         self,
@@ -186,7 +187,7 @@ class SimpleULA:
         _1,
         _2,
         persist=False,
-        pause_time=1,
+        pause_time=0.25,
     ):
         """Display the given untiled and tiled weights, including the selection pattern"""
         # Really nasty function signature here but that's ok. :)
@@ -194,7 +195,6 @@ class SimpleULA:
         normalised_af = array_factor - np.max(array_factor)
         self.update_array_factor_axis(self.ax_beam_pattern, normalised_af)
         self.ax_beam_pattern.set_title("Array Factor")
-        self.add_doi_indicators()
         if persist:
             plt.show()
         else:
@@ -205,6 +205,7 @@ class SimpleULA:
         mle - Main Lobe Energy
         sle - Sidelobe Energy
         islr - Integrated Sidelobe Ratio
+        mse - Mean Squared Error
         """
         radiated_power = self.radiated_power(complex_weights)
         mle_sum = 0
@@ -217,17 +218,17 @@ class SimpleULA:
             mle.append(doi_mle)
         sle = self.calculate_SLE(mle_sum, radiated_power)
         islr = sle / mle_sum
-        return islr, mle, mle_sum, sle
+        array_factor = 10 * np.log10(radiated_power)
+        normalised_af = array_factor - np.max(array_factor)
+        mse = mean_squared_error(array_factor, self.lms_target)
+        return mse, islr, mle, mle_sum, sle
 
     def calculate_MLE(self, theta, bw, radiated_power):
         theta_range = np.clip([theta - bw, theta + bw], -np.pi/2, np.pi/2)
         theta_sample_range = np.rint(
-            np.multiply(np.divide(np.add(theta_range, np.pi/2), np.pi), (self.samples - 1))
+            np.multiply(np.divide(np.add(theta_range, np.pi/2), np.pi), (self.samples))
         )
-        theta_samples = np.arange(
-            int(theta_sample_range[0]), int(theta_sample_range[1]), step=1, dtype=int
-        )
-        integration_region = radiated_power[theta_samples]
+        integration_region = radiated_power[int(theta_sample_range[0]):int(theta_sample_range[1])]
         mle = np.sum(integration_region) * 1/self.samples
         return mle
 

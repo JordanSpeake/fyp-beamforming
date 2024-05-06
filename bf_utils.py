@@ -33,6 +33,7 @@ class Logging:
     plots_persist: bool = False
     verbose: bool = False
     write_results: bool = False
+    output_final_values: bool = False
 
 
 class Parameters:
@@ -52,6 +53,7 @@ class Parameters:
         dois,
         rerandomisation_proximity,
         social_coeff,
+        target_sidelobe_level,
     ):
         self.subswarm_init_radius = subswarm_init_radius
         self.num_clusters = num_clusters
@@ -65,10 +67,10 @@ class Parameters:
         self.w_grid = np.zeros_like(self.u_grid)
         self.w_grid = np.emath.sqrt(1 - np.power(self.u_grid, 2) - np.power(self.v_grid, 2))
         self.w_grid = self.w_grid.real
-        print(self.w_grid)
         self.subswarm_charge = subswarm_charge
         self.centroid_velocity_coeff = centroid_velocity_coeff
         self.particle_inertia_weight = particle_inertia_weight
         self.dois = dois
         self.rerandomisation_proximity = rerandomisation_proximity
         self.social_coeff = social_coeff
+        self.target_sidelobe_level = target_sidelobe_level

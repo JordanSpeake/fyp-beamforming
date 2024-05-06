@@ -14,7 +14,7 @@ except ImportError:
 import beamformer as bf
 import bf_utils
 import antennas
-
+import numpy as np
 
 def read_config(path_to_config):
     """Parses the provided TOML file, generating classes required for the simulation"""
@@ -93,6 +93,7 @@ def parse_parameters_config(data):
             particle_inertia_weight=data["particle_inertia_weight"],
             rerandomisation_proximity=data["rerandomisation_proximity"],
             social_coeff=data["social_coeff"],
+            target_sidelobe_level=data["target_sidelobe_level"],
         )
     except KeyError as e:
         print(f"Failed to parse parameters config: {e}")
@@ -108,6 +109,7 @@ def parse_logging_config(data):
             plots_persist=data["plots_persist"],
             verbose=data["verbose"],
             write_results=data["write_results"],
+            output_final_values=data["output_final_values"]
         )
     except KeyError as e:
         print(f"Failed to parse logging config: {e}")
@@ -168,18 +170,26 @@ def main():
     if logging.write_results:
         output_path = get_output_path(config_name)
         with open(output_path, "w", newline="", encoding="utf-8") as file:
-            result = bf.beamformer(antenna, parameters, logging, config_name)
-            # try:
-            #     result = bf.beamformer(antenna, parameters, logging, config_name)
-            # except Exception as e:
-            #     print(f"Simulation cancelled, error in beamformer.py: {e}")
-            # else:
-            #     write_results(result, file)
-            #     print("Simulation results written successfully")
+            try:
+                result = bf.beamformer(antenna, parameters, logging, config_name)
+            except Exception as e:
+                print(f"Simulation cancelled, error in beamformer.py: {e}")
+            else:
+                write_results(result, file)
+                print("Simulation results written successfully")
     else:
-        with cProfile.Profile() as pr:
-            _ = bf.beamformer(antenna, parameters, logging, config_name)
-            pr.dump_stats("new_pso_profile_dump")
+        islr = []
+        mle = []
+        for i in range(10):
+            islr_data, mle_data = bf.beamformer(antenna, parameters, logging, config_name)
+            islr.append(islr_data)
+            mle.append(mle_data)
+            print(f"{i+1}/10")
+        print(bf_utils.to_dB(np.mean(islr)))
+        print(bf_utils.to_dB(np.mean(mle)))
+        # with cProfile.Profile() as pr:
+        #     _ = bf.beamformer(antenna, parameters, logging, config_name)
+        #     pr.dump_stats("new_pso_profile_dump")
     print("Done.")
 
 
