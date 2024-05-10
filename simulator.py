@@ -17,6 +17,7 @@ import bf_utils
 import antennas
 import numpy as np
 
+
 def read_config(path_to_config):
     """Parses the provided TOML file, generating classes required for the simulation"""
     with open(path_to_config, "rb") as file:
@@ -111,7 +112,7 @@ def parse_logging_config(data):
             plots_persist=data["plots_persist"],
             verbose=data["verbose"],
             write_results=data["write_results"],
-            output_final_values=data["output_final_values"]
+            output_final_values=data["output_final_values"],
         )
     except KeyError as e:
         print(f"Failed to parse logging config: {e}")
@@ -184,7 +185,6 @@ def main():
             _ = bf.beamformer(antenna, parameters, logging, config_name)
             pr.dump_stats("new_pso_profile_dump")
     print("Done.")
-
 
 
 main()

@@ -6,11 +6,13 @@ import matplotlib.pyplot as plt
 def to_dB(value):
     return 10 * np.log10(value)
 
+
 def random_complex(size):
     """Generates a random complex number, uniformly sampled from a zero-centred unit circle"""
     return np.sqrt(np.random.uniform(0, 1, size)) * np.exp(
         1.0j * np.random.uniform(0, 2 * np.pi, size)
     )
+
 
 def spherical_to_uv(spherical_coords):
     """Convert [theta, phi] to [u, v]. From spherical to directional cosine coordinates."""
@@ -19,6 +21,7 @@ def spherical_to_uv(spherical_coords):
     u = np.sin(theta) * np.cos(phi)
     v = np.sin(theta) * np.sin(phi)
     return np.asarray([u, v])
+
 
 def calculate_mean_squared_error(input_1, input_2):
     error = input_1 - input_2
@@ -32,6 +35,7 @@ def quantize(value, bit_depth):
     quantisation_step = int((value / 2 * np.pi) * bits)
     value = quantisation_step * 2 * np.pi / bits
     return value
+
 
 @dataclass
 class Logging:
@@ -70,9 +74,13 @@ class Parameters:
         self.max_particle_velocity = max_particle_velocity
         self.phase_bit_depth = phase_bit_depth
         self.samples = samples
-        self.u_grid, self.v_grid = np.meshgrid(np.linspace(-1, 1, samples), np.linspace(-1, 1, samples))
+        self.u_grid, self.v_grid = np.meshgrid(
+            np.linspace(-1, 1, samples), np.linspace(-1, 1, samples)
+        )
         self.w_grid = np.zeros_like(self.u_grid)
-        self.w_grid = np.emath.sqrt(1 - np.power(self.u_grid, 2) - np.power(self.v_grid, 2))
+        self.w_grid = np.emath.sqrt(
+            1 - np.power(self.u_grid, 2) - np.power(self.v_grid, 2)
+        )
         self.w_grid = self.w_grid.real
         self.subswarm_charge = subswarm_charge
         self.centroid_velocity_coeff = centroid_velocity_coeff

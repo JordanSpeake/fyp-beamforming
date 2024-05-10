@@ -8,6 +8,7 @@ import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 
+
 class Antenna:
     """Base class for all antennas"""
 
@@ -36,14 +37,13 @@ class Antenna:
             u_samples, v_samples = self.calculate_doi_region(doi)
             for u in u_samples:
                 for v in v_samples:
-                        mse_target[u, v] = self.mse_target_levels[0]
+                    mse_target[u, v] = self.mse_target_levels[0]
         for dnoi in self.dnois:
             u_samples, v_samples = self.calculate_doi_region(dnoi)
             for u in u_samples:
                 for v in v_samples:
-                        mse_target[u, v] = self.mse_target_levels[2]
+                    mse_target[u, v] = self.mse_target_levels[2]
         return mse_target
-
 
     def update_array_factor_axis(self, axis, array_factor):
         """Reset and clear axes for the next step's data output to be plotted"""
@@ -127,7 +127,7 @@ class Antenna:
                 v = self.v_grid[v_sample][0]
                 w = self.w_grid[u_sample][v_sample]
                 if np.abs(w) > 0:
-                    accumulator += radiated_power[u_sample][v_sample] /np.abs(w)
+                    accumulator += radiated_power[u_sample][v_sample] / np.abs(w)
         mle = accumulator * integration_constant
         return mle
 
@@ -163,7 +163,6 @@ class Antenna:
         islr = sle / np.sum(doi_mle)
         return mse, islr, doi_mle, dnoi_mle, sle
 
-
     def update_tiling_plot(self, tile_labels):
         """Update the tiling display subplot"""
         # pylint: disable=unused-argument
@@ -183,7 +182,7 @@ class SimpleULA:
         self.num_elements = num_elements
         self.spacing = spacing
         self.samples = parameters.samples
-        self.thetas = np.linspace(-np.pi/2, np.pi/2, self.samples)
+        self.thetas = np.linspace(-np.pi / 2, np.pi / 2, self.samples)
         self.figure = plt.figure()
         grid_spec = gridspec.GridSpec(1, 1)
         self.ax_beam_pattern = self.figure.add_subplot(grid_spec[0, 0])
@@ -193,11 +192,13 @@ class SimpleULA:
         self.mse_target = self.generate_mse_target()
 
     def get_sample_range(self, angle, bw):
-            value_range = np.clip([angle - bw, angle + bw], -np.pi/2, np.pi/2)
-            sample_range = np.rint(
-                np.multiply(np.divide(np.add(value_range, np.pi/2), np.pi), (self.samples - 1))
+        value_range = np.clip([angle - bw, angle + bw], -np.pi / 2, np.pi / 2)
+        sample_range = np.rint(
+            np.multiply(
+                np.divide(np.add(value_range, np.pi / 2), np.pi), (self.samples - 1)
             )
-            return np.asarray(sample_range, dtype=int)
+        )
+        return np.asarray(sample_range, dtype=int)
 
     def generate_mse_target(self):
         mse_target_levels = self.mse_target_levels
@@ -209,23 +210,25 @@ class SimpleULA:
             theta_doi = doi[0]
             bw = doi[2]
             doi_sample_range = self.get_sample_range(theta_doi, bw)
-            mse_target[doi_sample_range[0]:doi_sample_range[1]] = doi_af
+            mse_target[doi_sample_range[0] : doi_sample_range[1]] = doi_af
         for dnoi in self.dnois:
             dnoi_theta = dnoi[0]
             bw = dnoi[2]
             dnoi_sample_range = self.get_sample_range(dnoi_theta, bw)
-            mse_target[dnoi_sample_range[0]:dnoi_sample_range[1]] = dnoi_af
+            mse_target[dnoi_sample_range[0] : dnoi_sample_range[1]] = dnoi_af
         return mse_target
 
     def update_array_factor_axis(self, axis, array_factor):
         """Reset and clear axes for the next step's data output to be plotted"""
         axis.clear()
         axis.set_xlabel("Theta (degrees)")
-        axis.set_ylim(self.mse_target_levels[2]-10, 10)
+        axis.set_ylim(self.mse_target_levels[2] - 10, 10)
         axis.set_ylabel("Normalised Array Factor (dB)")
         axis.plot(array_factor)
-        axis.plot(self.mse_target, 'red')
-        axis.set_xticks(np.linspace(0, self.samples, 5), labels=np.linspace(-90, 90, 5, dtype=int))
+        axis.plot(self.mse_target, "red")
+        axis.set_xticks(
+            np.linspace(0, self.samples, 5), labels=np.linspace(-90, 90, 5, dtype=int)
+        )
 
     def display(
         self,
@@ -266,32 +269,39 @@ class SimpleULA:
             bw = doi[2]
             mle = self.calculate_MLE(theta, bw, radiated_power)
             doi_mle.append(mle)
-            theta_sample = np.multiply(np.divide(np.add(theta, np.pi/2), np.pi), (self.samples))
+            theta_sample = np.multiply(
+                np.divide(np.add(theta, np.pi / 2), np.pi), (self.samples)
+            )
             doi_af.append(array_factor[int(theta_sample)])
         for dnoi in self.dnois:
             theta = dnoi[0]
             bw = dnoi[2]
             mle = self.calculate_MLE(theta, bw, radiated_power)
             dnoi_mle.append(mle)
-            theta_sample = np.multiply(np.divide(np.add(theta, np.pi/2), np.pi), (self.samples))
+            theta_sample = np.multiply(
+                np.divide(np.add(theta, np.pi / 2), np.pi), (self.samples)
+            )
             dnoi_af.append(array_factor[int(theta_sample)])
         sle = self.calculate_SLE(np.sum(doi_mle), radiated_power)
         islr = sle / np.sum(doi_mle)
         af_difference = np.sum(doi_af) - np.sum(dnoi_af)
         return mse, islr, doi_mle, dnoi_mle, sle, af_difference
 
-
     def calculate_MLE(self, theta, bw, radiated_power):
-        theta_range = np.clip([theta - bw, theta + bw], -np.pi/2, np.pi/2)
+        theta_range = np.clip([theta - bw, theta + bw], -np.pi / 2, np.pi / 2)
         theta_sample_range = np.rint(
-            np.multiply(np.divide(np.add(theta_range, np.pi/2), np.pi), (self.samples))
+            np.multiply(
+                np.divide(np.add(theta_range, np.pi / 2), np.pi), (self.samples)
+            )
         )
-        integration_region = radiated_power[int(theta_sample_range[0]):int(theta_sample_range[1])]
-        mle = np.sum(integration_region) * 1/self.samples
+        integration_region = radiated_power[
+            int(theta_sample_range[0]) : int(theta_sample_range[1])
+        ]
+        mle = np.sum(integration_region) * 1 / self.samples
         return mle
 
     def calculate_SLE(self, mle_sum, radiated_power):
-        sle = (np.sum(radiated_power) * 1/self.samples) - mle_sum
+        sle = (np.sum(radiated_power) * 1 / self.samples) - mle_sum
         return sle
 
     def radiated_power(self, complex_weights):
@@ -301,7 +311,10 @@ class SimpleULA:
         weights = np.abs(complex_weights)
         sin_thetas = np.sin(self.thetas)
         for element in range(self.num_elements):
-            exponent = 1j * (phases[element] + (self.wavenumber * element * self.spacing * sin_thetas))
+            exponent = 1j * (
+                phases[element]
+                + (self.wavenumber * element * self.spacing * sin_thetas)
+            )
             electric_field += weights[element] * np.exp(exponent)
         radiated_power = np.power(np.abs(electric_field), 2)
         return radiated_power
@@ -348,6 +361,7 @@ class RectangularPlanar(Antenna):
                 [x, x + 1], y, y - 1, color=colors[tile_group]
             )
 
+
 class UniformLinear(Antenna):
     # use SimpleULA instead.
     def __init__(self, frequency: float, spacing: float, num_el: int, parameters):
@@ -383,7 +397,7 @@ class UniformLinear(Antenna):
 
 
 class Circular(Antenna):
-    #Not fully implemented, was used for earlier testing.
+    # Not fully implemented, was used for earlier testing.
     def __init__(self, frequency, radius, num_elements, parameters):
         self.radius = radius
         super().__init__(frequency, num_elements, parameters)
