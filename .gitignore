@@ -6,7 +6,8 @@
 
 # Config files, except those specified
 *.toml
-!example_config.toml
+!example_RPA_config.toml
+!example_ULA_config.toml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

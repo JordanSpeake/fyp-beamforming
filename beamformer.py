@@ -62,16 +62,19 @@ class Particle:
 
     def update_score(self):
         if self.num_clusters <= 0:
-            mse, islr, mle, mle_sum, sle = self.objective_function(self.position)
+            mse, islr, doi_mle, dnoi_mle, sle, af_difference = self.objective_function(self.position)
         else:
             self.generate_tiling()
-            mse, islr, mle, mle_sum, sle = self.objective_function(self.tiled_position)
+            mse, islr, doi_mle, dnoi_mle, sle, af_difference = self.objective_function(self.tiled_position)
         self.islr = islr
-        self.mle = mle
-        self.mle_sum = mle_sum
+        self.doi_mle = doi_mle
+        self.dnoi_mle = dnoi_mle
+        self.mle_sum = np.sum(doi_mle)
         self.sle = sle
         self.mse = mse
-        self.score = 1/islr
+        # Use self.score to set how the score of a particle is evaluated.
+        # This should ideally be set using the config file, but that wasn't implemented.
+        self.score = 1/mse
 
     def step(self):
         self.update_velocity()
@@ -201,5 +204,5 @@ def beamformer(antenna, params, logging, config_name):
             plot_particle_data(antenna, swarm.best_particle)
         results.append(get_results_from_particle(swarm.best_particle))
     if logging.output_final_values:
-        return swarm.best_particle.islr, swarm.best_particle.mle_sum
+        print(f"DOI MLEs: {swarm.best_particle.doi_mle}\n DNOI MLEs: {swarm.best_particle.dnoi_mle}")
     return results

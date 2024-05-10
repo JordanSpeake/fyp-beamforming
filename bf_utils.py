@@ -20,6 +20,12 @@ def spherical_to_uv(spherical_coords):
     v = np.sin(theta) * np.sin(phi)
     return np.asarray([u, v])
 
+def calculate_mean_squared_error(input_1, input_2):
+    error = input_1 - input_2
+    squared_error = np.power(error, 2)
+    mean_squared_error = np.mean(squared_error)
+    return mean_squared_error
+
 
 def quantize(value, bit_depth):
     bits = np.power(2, bit_depth)
@@ -51,9 +57,10 @@ class Parameters:
         centroid_velocity_coeff,
         particle_inertia_weight,
         dois,
+        dnois,
+        mse_target_levels,
         rerandomisation_proximity,
         social_coeff,
-        target_sidelobe_level,
     ):
         self.subswarm_init_radius = subswarm_init_radius
         self.num_clusters = num_clusters
@@ -71,6 +78,7 @@ class Parameters:
         self.centroid_velocity_coeff = centroid_velocity_coeff
         self.particle_inertia_weight = particle_inertia_weight
         self.dois = dois
+        self.dnois = dnois
         self.rerandomisation_proximity = rerandomisation_proximity
         self.social_coeff = social_coeff
-        self.target_sidelobe_level = target_sidelobe_level
+        self.mse_target_levels = mse_target_levels

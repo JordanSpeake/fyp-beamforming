@@ -1,0 +1,29 @@
+[antenna]
+type = "UniformLinear"
+frequency = 30e9
+spacing = [0.005, 0.005]
+num_elements = [4, 4]
+
+[parameters]
+samples = 300
+max_steps = 50
+num_clusters = 8
+phase_bit_depth = 0
+num_subswarms = 8
+subswarm_size = 16
+subswarm_init_radius = 0.2
+dois = [[-0.25, 0.3, 0.1], [0.25, -0.3, 0.2]]
+dnois = [[0, 0, 0.131], [-0.524, 0.175, 0.131]]
+particle_inertia_weight = 0.5
+centroid_velocity_coeff = 0.5
+social_coeff = 0.2
+subswarm_charge = 0.1
+max_particle_velocity = 4
+rerandomisation_proximity = 0.05
+mse_target_levels = [0, -10, -30]
+
+[logging]
+show_plots = true
+plots_persist = false
+verbose = true
+write_results = true

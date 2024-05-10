@@ -6,6 +6,7 @@ import csv
 import datetime
 import os.path
 import cProfile
+import time
 
 try:
     import tomlib
@@ -90,10 +91,11 @@ def parse_parameters_config(data):
             subswarm_charge=data["subswarm_charge"],
             centroid_velocity_coeff=data["centroid_velocity_coeff"],
             dois=data["dois"],
+            dnois=data["dnois"],
             particle_inertia_weight=data["particle_inertia_weight"],
             rerandomisation_proximity=data["rerandomisation_proximity"],
             social_coeff=data["social_coeff"],
-            target_sidelobe_level=data["target_sidelobe_level"],
+            mse_target_levels=data["mse_target_levels"],
         )
     except KeyError as e:
         print(f"Failed to parse parameters config: {e}")
@@ -178,19 +180,11 @@ def main():
                 write_results(result, file)
                 print("Simulation results written successfully")
     else:
-        islr = []
-        mle = []
-        for i in range(10):
-            islr_data, mle_data = bf.beamformer(antenna, parameters, logging, config_name)
-            islr.append(islr_data)
-            mle.append(mle_data)
-            print(f"{i+1}/10")
-        print(bf_utils.to_dB(np.mean(islr)))
-        print(bf_utils.to_dB(np.mean(mle)))
-        # with cProfile.Profile() as pr:
-        #     _ = bf.beamformer(antenna, parameters, logging, config_name)
-        #     pr.dump_stats("new_pso_profile_dump")
+        with cProfile.Profile() as pr:
+            _ = bf.beamformer(antenna, parameters, logging, config_name)
+            pr.dump_stats("new_pso_profile_dump")
     print("Done.")
+
 
 
 main()
